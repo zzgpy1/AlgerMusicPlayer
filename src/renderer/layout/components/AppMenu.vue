@@ -105,10 +105,11 @@ const toggleMenu = () => {
   max-height: calc(100vh - 120px); /* 为header预留空间，防止菜单项被遮挡 */
   overflow-y: auto;
   overflow-x: hidden;
-  /* 自定义滚动条样式 */
+  /* 自定义滚动条样式 - 默认隐藏，悬停时显示 */
   scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  scrollbar-color: transparent transparent;
   padding-bottom: 20px;
+  transition: scrollbar-color 0.3s ease;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -119,11 +120,21 @@ const toggleMenu = () => {
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: rgba(156, 163, 175, 0.5);
+    background-color: transparent;
     border-radius: 2px;
+    transition: background-color 0.3s ease;
+  }
 
-    &:hover {
-      background-color: rgba(156, 163, 175, 0.7);
+  /* 悬停时显示滚动条 */
+  &:hover {
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(156, 163, 175, 0.5);
+
+      &:hover {
+        background-color: rgba(156, 163, 175, 0.7);
+      }
     }
   }
 }
