@@ -79,6 +79,7 @@ import { useMessage } from 'naive-ui';
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import { CacheManager } from '@/api/musicParser';
 import { playMusic } from '@/hooks/MusicHook';
 import { audioService } from '@/services/audioService';
 import { usePlayerStore } from '@/store/modules/player';
@@ -160,12 +161,18 @@ const directReparseMusic = async (source: Platform) => {
     isReparsing.value = true;
     currentReparsingSource.value = source;
 
+    const songId = Number(playMusic.value.id);
+
+    await CacheManager.clearMusicCache(songId);
+
     // 更新选中的音源值为当前点击的音源
-    const songId = String(playMusic.value.id);
     selectedSourcesValue.value = [source];
 
     // 保存到localStorage
-    localStorage.setItem(`song_source_${songId}`, JSON.stringify(selectedSourcesValue.value));
+    localStorage.setItem(
+      `song_source_${String(songId)}`,
+      JSON.stringify(selectedSourcesValue.value)
+    );
 
     const success = await playerStore.reparseCurrentSong(source);
 

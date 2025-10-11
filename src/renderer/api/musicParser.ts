@@ -43,17 +43,31 @@ const CACHE_CONFIG = {
 /**
  * 缓存管理器
  */
-class CacheManager {
+export class CacheManager {
   /**
    * 获取缓存的音乐URL
    */
-  static async getCachedMusicUrl(id: number): Promise<MusicParseResult | null> {
+  static async getCachedMusicUrl(
+    id: number,
+    musicSources?: string[]
+  ): Promise<MusicParseResult | null> {
     try {
       const cached = await getData('music_url_cache', id);
       if (
         cached?.createTime &&
         Date.now() - cached.createTime < CACHE_CONFIG.MUSIC_URL_CACHE_TIME
       ) {
+        // 检查缓存的音源配置是否与当前配置一致
+        const cachedSources = cached.musicSources || [];
+        const currentSources = musicSources || [];
+
+        // 如果音源配置不一致，清除缓存
+        if (JSON.stringify(cachedSources.sort()) !== JSON.stringify(currentSources.sort())) {
+          console.log(`音源配置已变更，清除歌曲 ${id} 的缓存`);
+          await deleteData('music_url_cache', id);
+          return null;
+        }
+
         console.log(`使用缓存的音乐URL: ${id}`);
         return cached.data;
       }
@@ -70,11 +84,16 @@ class CacheManager {
   /**
    * 缓存音乐URL
    */
-  static async setCachedMusicUrl(id: number, result: MusicParseResult): Promise<void> {
+  static async setCachedMusicUrl(
+    id: number,
+    result: MusicParseResult,
+    musicSources?: string[]
+  ): Promise<void> {
     try {
       await saveData('music_url_cache', {
         id,
         data: result,
+        musicSources: musicSources || [],
         createTime: Date.now()
       });
       console.log(`缓存音乐URL成功: ${id}`);
@@ -117,6 +136,31 @@ class CacheManager {
       console.log(`添加失败缓存成功: ${strategyName}`);
     } catch (error) {
       console.error('添加失败缓存失败:', error);
+    }
+  }
+
+  /**
+   * 清除指定歌曲的所有缓存
+   */
+  static async clearMusicCache(id: number): Promise<void> {
+    try {
+      // 清除URL缓存
+      await deleteData('music_url_cache', id);
+      console.log(`清除歌曲 ${id} 的URL缓存`);
+
+      // 清除失败缓存 - 需要遍历所有策略
+      const strategies = ['custom', 'bilibili', 'gdmusic', 'unblockMusic'];
+      for (const strategy of strategies) {
+        const cacheKey = `${id}_${strategy}`;
+        try {
+          await deleteData('music_failed_cache', cacheKey);
+        } catch {
+          // 忽略删除不存在缓存的错误
+        }
+      }
+      console.log(`清除歌曲 ${id} 的失败缓存`);
+    } catch (error) {
+      console.error('清除缓存失败:', error);
     }
   }
 }
@@ -522,16 +566,6 @@ export class MusicParser {
         return await requestMusic.get<any>('/music', { params: { id } });
       }
 
-      // 检查缓存
-      console.log(`检查歌曲 ${id} 的缓存...`);
-      const cachedResult = await CacheManager.getCachedMusicUrl(id);
-      if (cachedResult) {
-        const endTime = performance.now();
-        console.log(`✅ 命中缓存，歌曲 ${id}，耗时: ${(endTime - startTime).toFixed(2)}ms`);
-        return cachedResult;
-      }
-      console.log(`❌ 未命中缓存，歌曲 ${id}，开始解析...`);
-
       // 获取设置存储
       let settingsStore: any;
       try {
@@ -540,6 +574,19 @@ export class MusicParser {
         console.error('无法获取设置存储，使用后备方案:', error);
         return await requestMusic.get<any>('/music', { params: { id } });
       }
+
+      // 获取音源配置
+      const { musicSources, quality } = getMusicConfig(id, settingsStore);
+
+      // 检查缓存（传入音源配置用于验证缓存有效性）
+      console.log(`检查歌曲 ${id} 的缓存...`);
+      const cachedResult = await CacheManager.getCachedMusicUrl(id, musicSources);
+      if (cachedResult) {
+        const endTime = performance.now();
+        console.log(`✅ 命中缓存，歌曲 ${id}，耗时: ${(endTime - startTime).toFixed(2)}ms`);
+        return cachedResult;
+      }
+      console.log(`❌ 未命中缓存，歌曲 ${id}，开始解析...`);
 
       // 检查音乐解析功能是否启用
       if (!settingsStore?.setData?.enableMusicUnblock) {
@@ -552,9 +599,6 @@ export class MusicParser {
           }
         };
       }
-
-      // 获取音源配置
-      const { musicSources, quality } = getMusicConfig(id, settingsStore);
 
       if (musicSources.length === 0) {
         console.warn('没有配置可用的音源，使用后备方案');
@@ -587,8 +631,8 @@ export class MusicParser {
               `解析成功，使用策略: ${strategy.name}，耗时: ${(endTime - startTime).toFixed(2)}ms`
             );
 
-            // 缓存成功结果
-            await CacheManager.setCachedMusicUrl(id, result);
+            // 缓存成功结果（包含音源配置）
+            await CacheManager.setCachedMusicUrl(id, result, musicSources);
 
             return result;
           }
@@ -612,7 +656,7 @@ export class MusicParser {
       // 如果后备方案成功，也进行缓存
       if (result?.data?.data?.url) {
         console.log('后备方案成功，缓存结果');
-        await CacheManager.setCachedMusicUrl(id, result);
+        await CacheManager.setCachedMusicUrl(id, result, []);
       }
 
       return result;
