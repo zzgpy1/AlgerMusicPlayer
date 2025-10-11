@@ -218,9 +218,6 @@ export const loadLyricWindow = (ipcMain: IpcMain, mainWin: BrowserWindow): void 
       // 记录原始窗口大小
       const [width, height] = lyricWindow.getSize();
       originalSize = { width, height };
-
-      // 在拖动时暂时禁用大小调整
-      lyricWindow.setResizable(false);
     }
   });
 
@@ -230,9 +227,6 @@ export const loadLyricWindow = (ipcMain: IpcMain, mainWin: BrowserWindow): void 
     if (lyricWindow && !lyricWindow.isDestroyed()) {
       // 确保窗口大小恢复原样
       lyricWindow.setSize(originalSize.width, originalSize.height);
-
-      // 拖动结束后恢复可调整大小
-      lyricWindow.setResizable(true);
     }
   });
 
