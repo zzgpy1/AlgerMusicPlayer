@@ -202,7 +202,7 @@ watch(
 
 <style lang="scss" scoped>
 .mobile-play-bar {
-  @apply fixed bottom-[56px] left-0 w-full flex flex-col;
+  @apply fixed bottom-[76px] left-0 w-full flex flex-col;
   z-index: 10000;
   animation-duration: 0.3s !important;
   transition: all 0.3s ease;

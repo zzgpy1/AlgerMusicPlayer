@@ -90,10 +90,11 @@ export class CacheManager {
     musicSources?: string[]
   ): Promise<void> {
     try {
+      // 深度克隆数据，确保可以被 IndexedDB 存储
       await saveData('music_url_cache', {
         id,
-        data: result,
-        musicSources: musicSources || [],
+        data: cloneDeep(result),
+        musicSources: cloneDeep(musicSources || []),
         createTime: Date.now()
       });
       console.log(`缓存音乐URL成功: ${id}`);

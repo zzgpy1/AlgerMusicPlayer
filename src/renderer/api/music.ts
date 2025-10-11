@@ -65,7 +65,7 @@ export const getMusicLrc = async (id: number) => {
     }
 
     // 获取新的歌词数据
-    const res = await request.get<ILyric>('/lyric', { params: { id } });
+    const res = await request.get<ILyric>('/lyric/new', { params: { id } });
 
     // 只有在成功获取新数据后才删除旧缓存并添加新缓存
     if (res?.data) {

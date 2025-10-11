@@ -14,6 +14,7 @@ import { type Platform } from '@/types/music';
 import { getImgUrl } from '@/utils';
 import { hasPermission } from '@/utils/auth';
 import { getImageLinearBackground } from '@/utils/linearColor';
+import { parseLyrics as parseYrcLyrics } from '@/utils/yrcParser';
 
 import { useSettingsStore } from './settings';
 import { useUserStore } from './user';
@@ -207,30 +208,56 @@ export const getSongUrl = async (
   }
 };
 
-const parseTime = (timeString: string): number => {
-  const [minutes, seconds] = timeString.split(':');
-  return Number(minutes) * 60 + Number(seconds);
-};
-
-const parseLyricLine = (lyricLine: string): { time: number; text: string } => {
-  const TIME_REGEX = /(\d{2}:\d{2}(\.\d*)?)/g;
-  const LRC_REGEX = /(\[(\d{2}):(\d{2})(\.(\d*))?\])/g;
-  const timeText = lyricLine.match(TIME_REGEX)?.[0] || '';
-  const time = parseTime(timeText);
-  const text = lyricLine.replace(LRC_REGEX, '').trim();
-  return { time, text };
-};
-
+/**
+ * 使用新的yrcParser解析歌词
+ * @param lyricsString 歌词字符串
+ * @returns 解析后的歌词数据
+ */
 const parseLyrics = (lyricsString: string): { lyrics: ILyricText[]; times: number[] } => {
-  const lines = lyricsString.split('\n');
-  const lyrics: ILyricText[] = [];
-  const times: number[] = [];
-  lines.forEach((line) => {
-    const { time, text } = parseLyricLine(line);
-    times.push(time);
-    lyrics.push({ text, trText: '' });
-  });
-  return { lyrics, times };
+  if (!lyricsString || typeof lyricsString !== 'string') {
+    return { lyrics: [], times: [] };
+  }
+
+  try {
+    const parseResult = parseYrcLyrics(lyricsString);
+
+    if (!parseResult.success) {
+      console.error('歌词解析失败:', parseResult.error.message);
+      return { lyrics: [], times: [] };
+    }
+
+    const { lyrics: parsedLyrics } = parseResult.data;
+    const lyrics: ILyricText[] = [];
+    const times: number[] = [];
+
+    for (const line of parsedLyrics) {
+      // 检查是否有逐字歌词
+      const hasWords = line.words && line.words.length > 0;
+
+      lyrics.push({
+        text: line.fullText,
+        trText: '', // 翻译文本稍后处理
+        words: hasWords
+          ? line.words.map((word) => ({
+              text: word.text,
+              startTime: word.startTime,
+              duration: word.duration
+            }))
+          : undefined,
+        hasWordByWord: hasWords,
+        startTime: line.startTime,
+        duration: line.duration
+      });
+
+      // 时间数组使用秒为单位（与原有逻辑保持一致）
+      times.push(line.startTime / 1000);
+    }
+
+    return { lyrics, times };
+  } catch (error) {
+    console.error('解析歌词时发生错误:', error);
+    return { lyrics: [], times: [] };
+  }
 };
 
 export const loadLrc = async (id: string | number): Promise<ILyric> => {
@@ -238,15 +265,25 @@ export const loadLrc = async (id: string | number): Promise<ILyric> => {
     console.log('B站音频，无需加载歌词');
     return {
       lrcTimeArray: [],
-      lrcArray: []
+      lrcArray: [],
+      hasWordByWord: false
     };
   }
 
   try {
     const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
     const { data } = await getMusicLrc(numericId);
-    const { lyrics, times } = parseLyrics(data.lrc.lyric);
+    const { lyrics, times } = parseLyrics(data?.yrc?.lyric || data?.lrc?.lyric);
     const tlyric: Record<string, string> = {};
+
+    // 检查是否有逐字歌词
+    let hasWordByWord = false;
+    for (const lyric of lyrics) {
+      if (lyric.hasWordByWord) {
+        hasWordByWord = true;
+        break;
+      }
+    }
 
     if (data.tlyric && data.tlyric.lyric) {
       const { lyrics: tLyrics, times: tTimes } = parseLyrics(data.tlyric.lyric);
@@ -258,15 +295,18 @@ export const loadLrc = async (id: string | number): Promise<ILyric> => {
     lyrics.forEach((item, index) => {
       item.trText = item.text ? tlyric[times[index].toString()] || '' : '';
     });
+
     return {
       lrcTimeArray: times,
-      lrcArray: lyrics
+      lrcArray: lyrics,
+      hasWordByWord
     };
   } catch (err) {
     console.error('Error loading lyrics:', err);
     return {
       lrcTimeArray: [],
-      lrcArray: []
+      lrcArray: [],
+      hasWordByWord: false
     };
   }
 };
@@ -275,7 +315,6 @@ const getSongDetail = async (playMusic: SongResult) => {
   // playMusic.playLoading 在 handlePlayMusic 中已设置，这里不再设置
 
   if (playMusic.source === 'bilibili') {
-    console.log('处理B站音频详情');
     try {
       // 如果需要获取URL
       if (!playMusic.playMusicUrl && playMusic.bilibiliData) {

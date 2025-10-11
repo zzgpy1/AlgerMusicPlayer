@@ -9,13 +9,27 @@ export interface IRecommendMusic {
   category: number;
   result: SongResult[];
 }
+// 逐字歌词单词数据
+export interface IWordData {
+  text: string;
+  startTime: number;
+  duration: number;
+}
+
 export interface ILyricText {
   text: string;
   trText: string;
+  words?: IWordData[];
+  hasWordByWord?: boolean;
+  startTime?: number;
+  duration?: number;
 }
+
 export interface ILyric {
   lrcTimeArray: number[];
   lrcArray: ILyricText[];
+  // 新增字段标识是否包含逐字歌词
+  hasWordByWord?: boolean;
 }
 
 export interface SongResult {

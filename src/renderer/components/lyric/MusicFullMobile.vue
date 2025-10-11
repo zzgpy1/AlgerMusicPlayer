@@ -57,7 +57,22 @@
               :class="{ 'now-text': index === nowIndex, 'hover-text': item.text }"
               @click="jumpToLyricTime(index)"
             >
-              <span :style="getLrcStyle(index)">{{ item.text }}</span>
+              <!-- 逐字歌词显示 -->
+              <div
+                v-if="item.hasWordByWord && item.words && item.words.length > 0"
+                class="word-by-word-lyric"
+              >
+                <span
+                  v-for="(word, wordIndex) in item.words"
+                  :key="wordIndex"
+                  class="lyric-word"
+                  :style="getWordStyle(index, wordIndex, word)"
+                >
+                  {{ word.text }}
+                </span>
+              </div>
+              <!-- 普通歌词显示 -->
+              <span v-else :style="getLrcStyle(index)">{{ item.text }}</span>
               <div v-if="config.showTranslation && item.trText" class="translation">
                 {{ item.trText }}
               </div>
@@ -119,7 +134,22 @@
             <div class="lyrics-container" v-if="!config.hideLyrics" @click="showFullLyricScreen">
               <div v-if="lrcArray.length > 0" class="lyrics-wrapper">
                 <div v-for="(line, idx) in visibleLyrics" :key="idx" class="lyric-line">
-                  {{ line.text }}
+                  <!-- 逐字歌词显示 -->
+                  <div
+                    v-if="line.hasWordByWord && line.words && line.words.length > 0"
+                    class="word-by-word-lyric"
+                  >
+                    <span
+                      v-for="(word, wordIndex) in line.words"
+                      :key="wordIndex"
+                      class="lyric-word"
+                      :style="getWordStyle(line.originalIndex, wordIndex, word)"
+                    >
+                      {{ word.text }}
+                    </span>
+                  </div>
+                  <!-- 普通歌词显示 -->
+                  <span v-else>{{ line.text }}</span>
                 </div>
               </div>
               <div v-else class="no-lyrics">
@@ -225,7 +255,22 @@
               :class="{ 'now-text': index === nowIndex, 'hover-text': item.text }"
               @click="jumpToLyricTime(index)"
             >
-              <span :style="getLrcStyle(index)">{{ item.text }}</span>
+              <!-- 逐字歌词显示 -->
+              <div
+                v-if="item.hasWordByWord && item.words && item.words.length > 0"
+                class="word-by-word-lyric"
+              >
+                <span
+                  v-for="(word, wordIndex) in item.words"
+                  :key="wordIndex"
+                  class="lyric-word"
+                  :style="getWordStyle(index, wordIndex, word)"
+                >
+                  {{ word.text }}
+                </span>
+              </div>
+              <!-- 普通歌词显示 -->
+              <span v-else :style="getLrcStyle(index)">{{ item.text }}</span>
               <div v-if="config.showTranslation && item.trText" class="translation">
                 {{ item.trText }}
               </div>
@@ -770,7 +815,11 @@ const visibleLyrics = computed(() => {
     startIdx = Math.max(0, endIdx - numLines + 1);
   }
 
-  return lrcArray.value.slice(startIdx, endIdx + 1);
+  // 返回带有原始索引的歌词数组
+  return lrcArray.value.slice(startIdx, endIdx + 1).map((item, idx) => ({
+    ...item,
+    originalIndex: startIdx + idx
+  }));
 });
 
 const props = defineProps({
@@ -1019,6 +1068,57 @@ const getLrcStyle = (index: number) => {
   return {
     color: colors.primary
   };
+};
+
+// 逐字歌词样式函数
+const getWordStyle = (lineIndex: number, _wordIndex: number, word: any) => {
+  const colors = textColors.value || getTextColors();
+  // 如果不是当前行，返回普通样式
+  if (lineIndex !== nowIndex.value) {
+    return {
+      color: colors.primary,
+      transition: 'color 0.3s ease',
+      // 重置背景相关属性
+      backgroundImage: 'none',
+      WebkitTextFillColor: 'initial'
+    };
+  }
+
+  // 当前行的逐字效果
+  const currentTime = nowTime.value * 1000; // 转换为毫秒，确保与word时间单位一致
+
+  // 直接使用绝对时间比较
+  const wordStartTime = word.startTime; // 单词开始的绝对时间（毫秒）
+  const wordEndTime = word.startTime + word.duration;
+
+  if (currentTime >= wordStartTime && currentTime < wordEndTime) {
+    // 当前正在播放的单词 - 使用渐变进度效果
+    const progress = Math.min((currentTime - wordStartTime) / word.duration, 1);
+    const progressPercent = Math.round(progress * 100);
+
+    return {
+      backgroundImage: `linear-gradient(to right, ${colors.active} 0%, ${colors.active} ${progressPercent}%, ${colors.primary} ${progressPercent}%, ${colors.primary} 100%)`,
+      backgroundClip: 'text',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+      textShadow: `0 0 8px ${colors.active}40`,
+      transition: 'all 0.1s ease'
+    };
+  } else if (currentTime >= wordEndTime) {
+    // 已经播放过的单词 - 纯色显示
+    return {
+      color: colors.active,
+      WebkitTextFillColor: 'initial',
+      transition: 'none'
+    };
+  } else {
+    // 还未播放的单词 - 普通状态
+    return {
+      color: colors.primary,
+      WebkitTextFillColor: 'initial',
+      transition: 'none'
+    };
+  }
 };
 </script>
 
@@ -1574,7 +1674,7 @@ const getLrcStyle = (index: number) => {
 
 // 通用歌词样式
 .lyric-line {
-  @apply cursor-pointer transition-all duration-300;
+  @apply cursor-pointer transition-all duration-300 font-medium;
   font-weight: 500;
   letter-spacing: var(--lyric-letter-spacing, 0);
   line-height: var(--lyric-line-height, 1.6);
@@ -1587,7 +1687,7 @@ const getLrcStyle = (index: number) => {
   }
 
   &.now-text {
-    @apply font-bold py-4;
+    @apply font-medium py-4;
     color: var(--text-color-active);
     opacity: 1;
   }
@@ -1598,6 +1698,25 @@ const getLrcStyle = (index: number) => {
 
   .translation {
     @apply font-normal opacity-70 mt-1 text-base;
+  }
+
+  // 逐字歌词样式
+  .word-by-word-lyric {
+    @apply flex flex-wrap justify-center;
+
+    .lyric-word {
+      @apply inline-block;
+      font-weight: inherit;
+      font-size: inherit;
+      letter-spacing: inherit;
+      line-height: inherit;
+      cursor: inherit;
+      position: relative;
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+    }
   }
 }
 
@@ -1763,6 +1882,10 @@ const getLrcStyle = (index: number) => {
             @apply text-sm opacity-60 mt-1;
           }
         }
+      }
+
+      .lyric-word {
+        @apply px-[2px];
       }
 
       .no-lyrics {

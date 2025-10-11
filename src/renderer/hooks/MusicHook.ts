@@ -10,6 +10,7 @@ import { getSongUrl } from '@/store/modules/player';
 import type { Artist, ILyricText, SongResult } from '@/types/music';
 import { isElectron } from '@/utils';
 import { getTextColors } from '@/utils/linearColor';
+import { parseLyrics } from '@/utils/yrcParser';
 
 const windowData = window as any;
 
@@ -64,7 +65,7 @@ export const musicDB = await useIndexedDB(
     { name: 'music_url_cache', keyPath: 'id' },
     { name: 'music_failed_cache', keyPath: 'id' }
   ],
-  2
+  3
 );
 
 // 键盘事件处理器，在初始化后设置
@@ -268,27 +269,119 @@ const initProgressAnimation = () => {
   });
 };
 
+/**
+ * 解析歌词字符串并转换为ILyricText格式
+ * @param lyricsStr 歌词字符串
+ * @returns 解析后的歌词数据
+ */
+const parseLyricsString = async (
+  lyricsStr: string
+): Promise<{ lrcArray: ILyricText[]; lrcTimeArray: number[]; hasWordByWord: boolean }> => {
+  if (!lyricsStr || typeof lyricsStr !== 'string') {
+    return { lrcArray: [], lrcTimeArray: [], hasWordByWord: false };
+  }
+
+  try {
+    const parseResult = parseLyrics(lyricsStr);
+
+    if (!parseResult.success) {
+      console.error('歌词解析失败:', parseResult.error.message);
+      return { lrcArray: [], lrcTimeArray: [], hasWordByWord: false };
+    }
+
+    const { lyrics } = parseResult.data;
+    const lrcArray: ILyricText[] = [];
+    const lrcTimeArray: number[] = [];
+    let hasWordByWord = false;
+
+    for (const line of lyrics) {
+      // 检查是否有逐字歌词
+      const hasWords = line.words && line.words.length > 0;
+      if (hasWords) {
+        hasWordByWord = true;
+      }
+
+      lrcArray.push({
+        text: line.fullText,
+        trText: '', // 翻译文本稍后处理
+        words: hasWords
+          ? line.words.map((word) => ({
+              text: word.text,
+              startTime: word.startTime,
+              duration: word.duration
+            }))
+          : undefined,
+        hasWordByWord: hasWords,
+        startTime: line.startTime,
+        duration: line.duration
+      });
+
+      lrcTimeArray.push(line.startTime);
+    }
+    console.log('parseLyricsString', lrcArray);
+    return { lrcArray, lrcTimeArray, hasWordByWord };
+  } catch (error) {
+    console.error('解析歌词时发生错误:', error);
+    return { lrcArray: [], lrcTimeArray: [], hasWordByWord: false };
+  }
+};
+
 // 设置音乐相关的监听器
 const setupMusicWatchers = () => {
   const store = getPlayerStore();
 
   // 监听 playerStore.playMusic 的变化以更新歌词数据
   watch(
-    () => store.playMusic,
-    () => {
-      nextTick(async () => {
-        console.log('歌曲切换，更新歌词数据');
-        // 更新歌词数据
-        const rawLrc = playMusic.value.lyric?.lrcArray || [];
-        lrcTimeArray.value = playMusic.value.lyric?.lrcTimeArray || [];
-        try {
-          const { translateLyrics } = await import('@/services/lyricTranslation');
-          lrcArray.value = await translateLyrics(rawLrc as any);
-        } catch (e) {
-          console.error('翻译歌词失败，使用原始歌词：', e);
-          lrcArray.value = rawLrc as any;
-        }
+    () => store.playMusic.id,
+    async (newId, oldId) => {
+      // 如果没有歌曲ID，清空歌词
+      if (!newId) {
+        lrcArray.value = [];
+        lrcTimeArray.value = [];
+        nowIndex.value = 0;
+        return;
+      }
 
+      // 避免相同ID的重复执行(但允许初始化时执行)
+      if (newId === oldId && lrcArray.value.length > 0) return;
+
+      // 歌曲切换时重置歌词索引
+      if (newId !== oldId) {
+        nowIndex.value = 0;
+      }
+
+      await nextTick(async () => {
+        console.log('歌曲切换，更新歌词数据');
+
+        // 检查是否有原始歌词字符串需要解析
+        const lyricData = playMusic.value.lyric;
+        if (lyricData && typeof lyricData === 'string') {
+          // 如果歌词是字符串格式，使用新的解析器
+          const {
+            lrcArray: parsedLrcArray,
+            lrcTimeArray: parsedTimeArray,
+            hasWordByWord
+          } = await parseLyricsString(lyricData);
+          lrcArray.value = parsedLrcArray;
+          lrcTimeArray.value = parsedTimeArray;
+
+          // 更新歌曲的歌词数据结构
+          if (playMusic.value.lyric && typeof playMusic.value.lyric === 'object') {
+            playMusic.value.lyric.hasWordByWord = hasWordByWord;
+          }
+        } else {
+          // 使用现有的歌词数据结构
+          const rawLrc = lyricData?.lrcArray || [];
+          lrcTimeArray.value = lyricData?.lrcTimeArray || [];
+
+          try {
+            const { translateLyrics } = await import('@/services/lyricTranslation');
+            lrcArray.value = await translateLyrics(rawLrc as any);
+          } catch (e) {
+            console.error('翻译歌词失败，使用原始歌词：', e);
+            lrcArray.value = rawLrc as any;
+          }
+        }
         // 当歌词数据更新时，如果歌词窗口打开，则发送数据
         if (isElectron && isLyricWindowOpen.value) {
           console.log('歌词窗口已打开，同步最新歌词数据');
@@ -302,10 +395,7 @@ const setupMusicWatchers = () => {
         }
       });
     },
-    {
-      deep: true,
-      immediate: true
-    }
+    { immediate: true }
   );
 };
 
@@ -563,20 +653,46 @@ export const adjustCorrectionTime = (delta: number) => {
 // 获取当前播放歌词
 export const isCurrentLrc = (index: number, time: number): boolean => {
   const currentTime = lrcTimeArray.value[index];
+
+  // 如果是最后一句歌词，只需要判断时间是否大于等于当前句的开始时间
+  if (index === lrcTimeArray.value.length - 1) {
+    const correctedTime = time + correctionTime.value;
+    return correctedTime >= currentTime;
+  }
+
+  // 非最后一句歌词，需要判断时间在当前句和下一句之间
   const nextTime = lrcTimeArray.value[index + 1];
   const correctedTime = time + correctionTime.value;
-  return correctedTime > currentTime && correctedTime < nextTime;
+  return correctedTime >= currentTime && correctedTime < nextTime;
 };
 
 // 获取当前播放歌词INDEX
 export const getLrcIndex = (time: number): number => {
   const correctedTime = time + correctionTime.value;
-  for (let i = 0; i < lrcTimeArray.value.length; i++) {
-    if (isCurrentLrc(i, correctedTime - correctionTime.value)) {
+
+  // 如果歌词数组为空，返回当前索引
+  if (lrcTimeArray.value.length === 0) {
+    return nowIndex.value;
+  }
+
+  // 处理最后一句歌词的情况
+  const lastIndex = lrcTimeArray.value.length - 1;
+  if (correctedTime >= lrcTimeArray.value[lastIndex]) {
+    nowIndex.value = lastIndex;
+    return lastIndex;
+  }
+
+  // 查找当前时间对应的歌词索引
+  for (let i = 0; i < lrcTimeArray.value.length - 1; i++) {
+    const currentTime = lrcTimeArray.value[i];
+    const nextTime = lrcTimeArray.value[i + 1];
+
+    if (correctedTime >= currentTime && correctedTime < nextTime) {
       nowIndex.value = i;
       return i;
     }
   }
+
   return nowIndex.value;
 };
 
@@ -832,6 +948,9 @@ const setupPlayStateWatcher = () => {
 onUnmounted(() => {
   stopLyricSync();
 });
+
+// 导出歌词解析函数供外部使用
+export { parseLyricsString };
 
 // 添加播放控制命令监听
 if (isElectron) {
