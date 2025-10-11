@@ -58,7 +58,9 @@ export default {
       'Changing GPU acceleration settings requires application restart to take effect',
     gpuAccelerationChangeSuccess:
       'GPU acceleration settings updated, restart application to take effect',
-    gpuAccelerationChangeError: 'Failed to update GPU acceleration settings'
+    gpuAccelerationChangeError: 'Failed to update GPU acceleration settings',
+    tabletMode: 'Tablet Mode',
+    tabletModeDesc: 'Enabling tablet mode allows using PC-style interface on mobile devices'
   },
   playback: {
     quality: 'Audio Quality',

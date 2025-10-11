@@ -4,7 +4,7 @@
       <title-bar />
       <div class="layout-main-page">
         <!-- 侧边菜单栏 -->
-        <app-menu v-if="!isMobile" class="menu" :menus="menus" />
+        <app-menu v-if="!settingsStore.isMobile" class="menu" :menus="menuStore.menus" />
         <div class="main">
           <!-- 搜索栏 -->
           <search-bar />
@@ -17,7 +17,7 @@
             <router-view
               v-slot="{ Component }"
               class="main-page"
-              :class="route.meta.noScroll && !isMobile ? 'pr-3' : ''"
+              :class="route.meta.noScroll && !settingsStore.isMobile ? 'pr-3' : ''"
             >
               <keep-alive :include="keepAliveInclude">
                 <component :is="Component" />
@@ -25,27 +25,27 @@
             </router-view>
           </div>
           <play-bottom />
-          <app-menu v-if="shouldShowMobileMenu" class="menu" :menus="menus" />
+          <app-menu v-if="shouldShowMobileMenu" class="menu" :menus="menuStore.menus" />
         </div>
       </div>
       <!-- 底部音乐播放 -->
       <template v-if="!settingsStore.isMiniMode">
         <play-bar
-          v-if="!isMobile"
+          v-if="!settingsStore.isMobile"
           v-show="isPlay"
           :style="playerStore.musicFull ? 'bottom: 0;' : ''"
         />
         <mobile-play-bar
           v-else
           v-show="isPlay"
-          :style="isMobile && playerStore.musicFull ? 'bottom: 0;' : ''"
+          :style="settingsStore.isMobile && playerStore.musicFull ? 'bottom: 0;' : ''"
         />
       </template>
     </div>
     <install-app-modal v-if="!isElectron"></install-app-modal>
     <update-modal v-if="isElectron" />
     <playlist-drawer v-model="showPlaylistDrawer" :song-id="currentSongId" />
-    <sleep-timer-top v-if="!isMobile" />
+    <sleep-timer-top v-if="!settingsStore.isMobile" />
     <!-- 下载管理抽屉 -->
     <download-drawer
       v-if="
@@ -74,7 +74,7 @@ import otherRouter from '@/router/other';
 import { useMenuStore } from '@/store/modules/menu';
 import { usePlayerStore } from '@/store/modules/player';
 import { useSettingsStore } from '@/store/modules/settings';
-import { isElectron, isMobile } from '@/utils';
+import { isElectron } from '@/utils';
 
 const keepAliveInclude = computed(() => {
   const allRoutes = [...homeRouter, ...otherRouter];
@@ -106,15 +106,14 @@ const settingsStore = useSettingsStore();
 const menuStore = useMenuStore();
 
 const isPlay = computed(() => playerStore.playMusic && playerStore.playMusic.id);
-const { menus } = menuStore;
 const route = useRoute();
 
 // 判断当前路由是否应该在移动端显示AppMenu
 const shouldShowMobileMenu = computed(() => {
   // 过滤出在menus中定义的路径
-  const menuPaths = menus.map((item: any) => item.path);
+  const menuPaths = menuStore.menus.map((item: any) => item.path);
   // 检查当前路由路径是否在menus中
-  return menuPaths.includes(route.path) && isMobile.value && !playerStore.musicFull;
+  return menuPaths.includes(route.path) && settingsStore.isMobile && !playerStore.musicFull;
 });
 
 provide('shouldShowMobileMenu', shouldShowMobileMenu);

@@ -50,7 +50,14 @@ export default {
       englishText: 'The quick brown fox jumps over the lazy dog',
       japaneseText: 'あいうえお かきくけこ さしすせそ',
       koreanText: '가나다라마 바사아자차 카타파하'
-    }
+    },
+    gpuAcceleration: 'GPU加速',
+    gpuAccelerationDesc: '啟用或禁用硬體加速，可以提高渲染性能，但可能會增加GPU負載',
+    gpuAccelerationRestart: '更改GPU加速設定需要重啟應用後生效',
+    gpuAccelerationChangeSuccess: 'GPU加速設定已更新，重啟應用後生效',
+    gpuAccelerationChangeError: 'GPU加速設定更新失敗',
+    tabletMode: '平板模式',
+    tabletModeDesc: '啟用後將在移動設備上使用PC樣式界面，適合平板等大屏設備'
   },
   playback: {
     quality: '音質設定',

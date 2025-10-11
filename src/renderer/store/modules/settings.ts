@@ -1,8 +1,10 @@
 import { cloneDeep, merge } from 'lodash';
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 import setDataDefault from '@/../main/set.json';
+import homeRouter from '@/router/home';
+import { useMenuStore } from '@/store/modules/menu';
 import { isElectron } from '@/utils';
 import {
   applyTheme,
@@ -196,6 +198,56 @@ export const useSettingsStore = defineStore('settings', () => {
       console.error('获取系统字体失败:', error);
     }
   };
+
+  // 计算移动端状态的函数
+  const calculateMobileStatus = () => {
+    const userAgentFlag = navigator.userAgent.match(
+      /(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i
+    );
+    const isMobileWidth = window.innerWidth < 500;
+    const isMobileDevice = !!userAgentFlag || isMobileWidth;
+    const tabletMode = setData.value?.tabletMode;
+
+    return isMobileDevice && !tabletMode;
+  };
+
+  // 更新移动端状态和DOM类
+  const updateMobileStatus = () => {
+    const menuStore = useMenuStore();
+    const shouldUseMobileStyle = calculateMobileStatus();
+
+    // 更新store状态
+    if (shouldUseMobileStyle) {
+      menuStore.setMenus(homeRouter.filter((item) => item.meta.isMobile));
+    } else {
+      menuStore.setMenus(homeRouter);
+    }
+
+    // 更新DOM类
+    if (shouldUseMobileStyle) {
+      document.documentElement.classList.add('mobile');
+      document.documentElement.classList.remove('pc');
+    } else {
+      document.documentElement.classList.add('pc');
+      document.documentElement.classList.remove('mobile');
+    }
+
+    isMobile.value = shouldUseMobileStyle;
+  };
+
+  // 监听平板模式变化
+  watch(
+    () => setData.value?.tabletMode,
+    () => {
+      updateMobileStatus();
+    },
+    { immediate: true }
+  );
+
+  // 监听窗口大小变化
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', updateMobileStatus);
+  }
 
   return {
     setData,

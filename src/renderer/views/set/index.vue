@@ -59,6 +59,20 @@
               <language-switcher />
             </div>
 
+            <!-- 平板模式设置 -->
+            <div class="set-item" v-if="!isElectron">
+              <div>
+                <div class="set-item-title">{{ t('settings.basic.tabletMode') }}</div>
+                <div class="set-item-content">
+                  {{ t('settings.basic.tabletModeDesc') }}
+                </div>
+              </div>
+              <n-switch v-model:value="setData.tabletMode">
+                <template #checked><i class="ri-tablet-line"></i></template>
+                <template #unchecked><i class="ri-smartphone-line"></i></template>
+              </n-switch>
+            </div>
+
             <div class="set-item">
               <div>
                 <div class="set-item-title">{{ t('settings.translationEngine') }}</div>
@@ -642,7 +656,6 @@ const localSetData = ref({ ...settingsStore.setData });
 
 // 在组件卸载时保存设置
 onUnmounted(() => {
-  // 确保最终设置被保存
   settingsStore.setSetData(localSetData.value);
 });
 
@@ -656,16 +669,10 @@ const updateInfo = ref<UpdateResult>({
 
 const { t } = useI18n();
 
-// 创建一个防抖的保存函数
-// const debouncedSaveSettings = debounce((newData) => {
-//   settingsStore.setSetData(newData);
-// }, 500);
-
 const saveSettings = useDebounceFn((data) => {
   settingsStore.setSetData(data);
 }, 500);
 
-// 使用计算属性来管理设置数据
 const setData = computed({
   get: () => localSetData.value,
   set: (newData) => {

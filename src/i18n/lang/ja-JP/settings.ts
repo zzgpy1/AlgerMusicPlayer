@@ -57,7 +57,10 @@ export default {
     gpuAccelerationRestart: 'GPUアクセラレーション設定の変更はアプリの再起動後に有効になります',
     gpuAccelerationChangeSuccess:
       'GPUアクセラレーション設定を更新しました。アプリの再起動後に有効になります',
-    gpuAccelerationChangeError: 'GPUアクセラレーション設定の更新に失敗しました'
+    gpuAccelerationChangeError: 'GPUアクセラレーション設定の更新に失敗しました',
+    tabletMode: 'タブレットモード',
+    tabletModeDesc:
+      'タブレットモードを有効にすると、モバイルデバイスでPCスタイルのインターフェースを使用できます'
   },
   playback: {
     quality: '音質設定',

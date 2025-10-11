@@ -19,8 +19,6 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 
 import TrafficWarningDrawer from '@/components/TrafficWarningDrawer.vue';
-import homeRouter from '@/router/home';
-import { useMenuStore } from '@/store/modules/menu';
 import { usePlayerStore } from '@/store/modules/player';
 import { useSettingsStore } from '@/store/modules/settings';
 import { isElectron, isLyricWindow } from '@/utils';
@@ -32,7 +30,6 @@ import { useAppShortcuts } from './utils/appShortcuts';
 
 const { locale } = useI18n();
 const settingsStore = useSettingsStore();
-const menuStore = useMenuStore();
 const playerStore = usePlayerStore();
 const router = useRouter();
 
@@ -75,9 +72,6 @@ if (!isLyricWindow.value) {
   settingsStore.initializeSettings();
   settingsStore.initializeTheme();
   settingsStore.initializeSystemFonts();
-  if (isMobile.value) {
-    menuStore.setMenus(homeRouter.filter((item) => item.meta.isMobile));
-  }
 }
 
 handleSetLanguage(settingsStore.setData.language);

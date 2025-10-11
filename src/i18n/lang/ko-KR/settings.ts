@@ -57,7 +57,10 @@ export default {
     gpuAccelerationRestart: 'GPU 가속 설정을 변경하면 애플리케이션을 다시 시작해야 합니다',
     gpuAccelerationChangeSuccess:
       'GPU 가속 설정이 업데이트되었습니다. 애플리케이션을 다시 시작하여 적용하십시오',
-    gpuAccelerationChangeError: 'GPU 가속 설정 업데이트에 실패했습니다'
+    gpuAccelerationChangeError: 'GPU 가속 설정 업데이트에 실패했습니다',
+    tabletMode: '태블릿 모드',
+    tabletModeDesc:
+      '태블릿 모드를 사용하면 모바일 기기에서 PC 스타일의 인터페이스를 사용할 수 있습니다'
   },
   playback: {
     quality: '음질 설정',

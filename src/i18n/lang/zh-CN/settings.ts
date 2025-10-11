@@ -55,7 +55,9 @@ export default {
     gpuAccelerationDesc: '启用或禁用硬件加速，可以提高渲染性能但可能会增加GPU负载',
     gpuAccelerationRestart: '更改GPU加速设置需要重启应用后生效',
     gpuAccelerationChangeSuccess: 'GPU加速设置已更新，重启应用后生效',
-    gpuAccelerationChangeError: 'GPU加速设置更新失败'
+    gpuAccelerationChangeError: 'GPU加速设置更新失败',
+    tabletMode: '平板模式',
+    tabletModeDesc: '启用后将在移动设备上使用PC样式界面，适合平板等大屏设备'
   },
   playback: {
     quality: '音质设置',

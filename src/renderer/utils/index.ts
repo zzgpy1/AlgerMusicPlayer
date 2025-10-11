@@ -1,4 +1,3 @@
-import { useWindowSize } from '@vueuse/core';
 import { computed } from 'vue';
 
 import { useSettingsStore } from '@/store/modules/settings';
@@ -74,26 +73,8 @@ export const getImgUrl = (url: string | undefined, size: string = '') => {
 };
 
 export const isMobile = computed(() => {
-  const { width } = useWindowSize();
-  const userAgentFlag = navigator.userAgent.match(
-    /(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i
-  );
-
-  const isMobileWidth = width.value < 500;
-  const isMobileDevice = !!userAgentFlag || isMobileWidth;
-
   const settingsStore = useSettingsStore();
-  settingsStore.isMobile = isMobileDevice;
-
-  // 给html标签 添加或移除mobile类
-  if (isMobileDevice) {
-    document.documentElement.classList.add('mobile');
-  } else {
-    document.documentElement.classList.add('pc');
-    document.documentElement.classList.remove('mobile');
-  }
-
-  return isMobileDevice;
+  return settingsStore.isMobile;
 });
 
 export const isElectron = (window as any).electron !== undefined;
