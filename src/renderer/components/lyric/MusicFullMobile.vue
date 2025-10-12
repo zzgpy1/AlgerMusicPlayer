@@ -49,27 +49,31 @@
             @scroll="handleScroll"
           >
             <div class="lyrics-padding-top"></div>
+            <!-- 无时间戳歌词提示 -->
+            <div v-if="!supportAutoScroll" class="lyric-line no-scroll-tip">
+              <span>本歌词不支持自动滚动</span>
+            </div>
             <div
               v-for="(item, index) in lrcArray"
               :key="index"
               :id="`lyric-line-${index}`"
               class="lyric-line"
-              :class="{ 'now-text': index === nowIndex, 'hover-text': item.text }"
-              @click="jumpToLyricTime(index)"
+              :class="{
+                'now-text': index === nowIndex,
+                'hover-text': item.text && item.startTime !== -1
+              }"
+              @click="item.startTime !== -1 ? jumpToLyricTime(index) : null"
             >
               <!-- 逐字歌词显示 -->
               <div
                 v-if="item.hasWordByWord && item.words && item.words.length > 0"
                 class="word-by-word-lyric"
               >
-                <span
-                  v-for="(word, wordIndex) in item.words"
-                  :key="wordIndex"
-                  class="lyric-word"
-                  :style="getWordStyle(index, wordIndex, word)"
+                <template v-for="(word, wordIndex) in item.words" :key="wordIndex">
+                  <span class="lyric-word" :style="getWordStyle(index, wordIndex, word)">
+                    {{ word.text }} </span
+                  ><span class="lyric-word" v-if="word.space">&nbsp;</span></template
                 >
-                  {{ word.text }}
-                </span>
               </div>
               <!-- 普通歌词显示 -->
               <span v-else :style="getLrcStyle(index)">{{ item.text }}</span>
@@ -247,27 +251,31 @@
             @scroll="handleScroll"
           >
             <div class="lyrics-padding-top"></div>
+            <!-- 无时间戳歌词提示 -->
+            <div v-if="!supportAutoScroll" class="lyric-line no-scroll-tip">
+              <span>本歌词不支持自动滚动</span>
+            </div>
             <div
               v-for="(item, index) in lrcArray"
               :key="index"
               :id="`landscape-lyric-line-${index}`"
               class="lyric-line"
-              :class="{ 'now-text': index === nowIndex, 'hover-text': item.text }"
-              @click="jumpToLyricTime(index)"
+              :class="{
+                'now-text': index === nowIndex,
+                'hover-text': item.text && item.startTime !== -1
+              }"
+              @click="item.startTime !== -1 ? jumpToLyricTime(index) : null"
             >
               <!-- 逐字歌词显示 -->
               <div
                 v-if="item.hasWordByWord && item.words && item.words.length > 0"
                 class="word-by-word-lyric"
               >
-                <span
-                  v-for="(word, wordIndex) in item.words"
-                  :key="wordIndex"
-                  class="lyric-word"
-                  :style="getWordStyle(index, wordIndex, word)"
+                <template v-for="(word, wordIndex) in item.words" :key="wordIndex">
+                  <span class="lyric-word" :style="getWordStyle(index, wordIndex, word)">
+                    {{ word.text }} </span
+                  ><span class="lyric-word" v-if="word.space">&nbsp;</span></template
                 >
-                  {{ word.text }}
-                </span>
               </div>
               <!-- 普通歌词显示 -->
               <span v-else :style="getLrcStyle(index)">{{ item.text }}</span>
@@ -458,6 +466,10 @@ const showFullLyricScreen = () => {
   });
 };
 
+const supportAutoScroll = computed(() => {
+  return lrcArray.value.length > 0 && lrcArray.value[0].startTime !== -1;
+});
+
 // 关闭全屏歌词
 const closeFullLyrics = () => {
   showFullLyrics.value = false;
@@ -473,6 +485,11 @@ const scrollToCurrentLyric = (immediate = false, customScrollerRef?: HTMLElement
     const scrollerRef = customScrollerRef || lyricsScrollerRef.value;
     if (!scrollerRef) {
       console.log('歌词容器引用不存在');
+      return;
+    }
+
+    if (!supportAutoScroll.value) {
+      console.log('歌词不支持自动滚动');
       return;
     }
 
@@ -1681,6 +1698,16 @@ const getWordStyle = (lineIndex: number, _wordIndex: number, word: any) => {
   color: var(--text-color-primary);
   opacity: 0.8;
 
+  &.no-scroll-tip {
+    @apply text-base opacity-60 cursor-default py-2;
+    color: var(--text-color-primary);
+    font-weight: normal;
+
+    span {
+      padding-right: 0;
+    }
+  }
+
   span {
     background-clip: text !important;
     -webkit-background-clip: text !important;
@@ -1712,6 +1739,7 @@ const getWordStyle = (lineIndex: number, _wordIndex: number, word: any) => {
       line-height: inherit;
       cursor: inherit;
       position: relative;
+      padding-right: 0 !important;
 
       &:hover {
         background-color: rgba(255, 255, 255, 0.1);
