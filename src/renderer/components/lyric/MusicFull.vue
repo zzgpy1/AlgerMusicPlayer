@@ -767,9 +767,7 @@ defineExpose({
 
         .lyric-word {
           @apply inline-block;
-          margin-right: 4px;
-          padding: 2px 4px;
-          border-radius: 4px;
+          padding-right: 0;
           font-weight: inherit;
           font-size: inherit;
           letter-spacing: inherit;
