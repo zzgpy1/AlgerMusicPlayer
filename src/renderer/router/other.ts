@@ -86,6 +86,17 @@ const otherRouter = [
       back: true
     },
     component: () => import('@/views/playlist/ImportPlaylist.vue')
+  },
+  {
+    path: '/heatmap',
+    name: 'heatmap',
+    meta: {
+      title: '播放热力图',
+      keepAlive: true,
+      showInMenu: false,
+      back: true
+    },
+    component: () => import('@/views/heatmap/index.vue')
   }
 ];
 export default otherRouter;

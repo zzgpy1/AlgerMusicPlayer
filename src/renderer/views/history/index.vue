@@ -1,7 +1,19 @@
 <template>
   <div class="history-page">
-    <div class="title" :class="setAnimationClass('animate__fadeInRight')">
-      {{ t('history.title') }}
+    <div class="title-wrapper" :class="setAnimationClass('animate__fadeInRight')">
+      <div class="title">{{ t('history.title') }}</div>
+      <n-button
+        secondary
+        type="primary"
+        size="small"
+        class="heatmap-btn"
+        @click="handleNavigateToHeatmap"
+      >
+        <template #icon>
+          <i class="iconfont ri-calendar-2-line"></i>
+        </template>
+        {{ t('history.heatmapTitle') }}
+      </n-button>
     </div>
     <!-- 第一级Tab: 歌曲/歌单/专辑 -->
     <div class="category-tabs-wrapper" :class="setAnimationClass('animate__fadeInRight')">
@@ -509,6 +521,11 @@ const handleDelMusic = async (item: SongResult) => {
   musicList.value = musicList.value.filter((music) => music.id !== item.id);
   displayList.value = displayList.value.filter((music) => music.id !== item.id);
 };
+
+// 跳转到热力图页面
+const handleNavigateToHeatmap = () => {
+  router.push('/heatmap');
+};
 </script>
 
 <style scoped lang="scss">
@@ -516,9 +533,23 @@ const handleDelMusic = async (item: SongResult) => {
   @apply h-full w-full pt-2;
   @apply bg-light dark:bg-black;
 
-  .title {
-    @apply pl-4 text-xl font-bold pb-2 px-4;
-    @apply text-gray-900 dark:text-white;
+  .title-wrapper {
+    @apply flex items-center justify-between pb-2 px-4;
+
+    .title {
+      @apply text-xl font-bold;
+      @apply text-gray-900 dark:text-white;
+    }
+
+    .heatmap-btn {
+      @apply rounded-full px-4 h-8;
+      @apply transition-all duration-300;
+      @apply hover:scale-105;
+
+      .iconfont {
+        @apply text-base;
+      }
+    }
   }
 
   .category-tabs-wrapper {

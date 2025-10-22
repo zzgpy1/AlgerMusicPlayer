@@ -80,6 +80,7 @@
             @play="handlePlay"
             @select="handleSelect"
           />
+
           <div v-if="isComponent" class="favorite-list-more text-center">
             <n-button text type="primary" @click="handleMore">{{ t('common.viewMore') }}</n-button>
           </div>
@@ -90,6 +91,7 @@
 
           <div v-if="noMore" class="no-more-tip">{{ t('common.noMore') }}</div>
         </div>
+        <play-bottom />
       </n-scrollbar>
     </div>
   </div>
@@ -102,6 +104,7 @@ import { useRouter } from 'vue-router';
 
 import { processBilibiliVideos } from '@/api/bilibili';
 import { getMusicDetail } from '@/api/music';
+import PlayBottom from '@/components/common/PlayBottom.vue';
 import SongItem from '@/components/common/SongItem.vue';
 import { useDownload } from '@/hooks/useDownload';
 import { usePlayerStore } from '@/store';
