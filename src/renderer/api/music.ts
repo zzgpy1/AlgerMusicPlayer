@@ -176,3 +176,15 @@ export function subscribePlaylist(params: { t: number; id: number }) {
     params
   });
 }
+
+/**
+ * 收藏/取消收藏专辑
+ * @param params t: 1 收藏, 2 取消收藏; id: 专辑id
+ */
+export function subscribeAlbum(params: { t: number; id: number }) {
+  return request({
+    url: '/album/sub',
+    method: 'post',
+    params
+  });
+}

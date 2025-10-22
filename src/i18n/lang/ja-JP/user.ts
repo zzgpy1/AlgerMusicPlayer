@@ -10,6 +10,11 @@ export default {
     trackCount: '{count}曲',
     playCount: '{count}回再生'
   },
+  tabs: {
+    created: '作成',
+    favorite: 'お気に入り',
+    album: 'アルバム'
+  },
   ranking: {
     title: '聴取ランキング',
     playCount: '{count}回'

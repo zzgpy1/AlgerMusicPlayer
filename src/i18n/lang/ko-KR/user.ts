@@ -10,6 +10,11 @@ export default {
     trackCount: '{count}곡',
     playCount: '{count}회 재생'
   },
+  tabs: {
+    created: '생성',
+    favorite: '즐겨찾기',
+    album: '앨범'
+  },
   ranking: {
     title: '음악 청취 순위',
     playCount: '{count}회'

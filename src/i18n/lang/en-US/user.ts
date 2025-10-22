@@ -10,6 +10,11 @@ export default {
     trackCount: '{count} tracks',
     playCount: 'Played {count} times'
   },
+  tabs: {
+    created: 'Created',
+    favorite: 'Favorite',
+    album: 'Album'
+  },
   ranking: {
     title: 'Listening History',
     playCount: '{count} times'

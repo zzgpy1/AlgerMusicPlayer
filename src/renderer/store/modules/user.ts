@@ -3,6 +3,7 @@ import { ref } from 'vue';
 
 import { logout } from '@/api/login';
 import { getLikedList } from '@/api/music';
+import { getUserAlbumSublist } from '@/api/user';
 import { clearLoginStatus } from '@/utils/auth';
 
 interface UserData {
@@ -27,6 +28,8 @@ export const useUserStore = defineStore('user', () => {
   );
   const searchValue = ref('');
   const searchType = ref(1);
+  // 收藏的专辑 ID 列表
+  const collectedAlbumIds = ref<Set<number>>(new Set());
 
   // 方法
   const setUser = (userData: UserData) => {
@@ -69,6 +72,39 @@ export const useUserStore = defineStore('user', () => {
     searchType.value = type;
   };
 
+  // 初始化收藏的专辑列表
+  const initializeCollectedAlbums = async () => {
+    if (!user.value || !localStorage.getItem('token')) {
+      collectedAlbumIds.value.clear();
+      return;
+    }
+
+    try {
+      const { data } = await getUserAlbumSublist({ limit: 1000, offset: 0 });
+      const albumIds = (data?.data || []).map((album: any) => album.id);
+      collectedAlbumIds.value = new Set(albumIds);
+      console.log(`已加载 ${albumIds.length} 个收藏专辑`);
+    } catch (error) {
+      console.error('获取收藏专辑列表失败:', error);
+      collectedAlbumIds.value.clear();
+    }
+  };
+
+  // 添加收藏专辑
+  const addCollectedAlbum = (albumId: number) => {
+    collectedAlbumIds.value.add(albumId);
+  };
+
+  // 移除收藏专辑
+  const removeCollectedAlbum = (albumId: number) => {
+    collectedAlbumIds.value.delete(albumId);
+  };
+
+  // 检查专辑是否已收藏
+  const isAlbumCollected = (albumId: number) => {
+    return collectedAlbumIds.value.has(albumId);
+  };
+
   // 初始化
   const initializeUser = async () => {
     const savedUser = getLocalStorageItem<UserData | null>('user', null);
@@ -77,6 +113,9 @@ export const useUserStore = defineStore('user', () => {
       // 如果用户已登录，获取收藏列表
       if (localStorage.getItem('token')) {
         try {
+          // 同时初始化收藏专辑列表
+          await initializeCollectedAlbums();
+
           const { data } = await getLikedList(savedUser.userId);
           return data?.ids || [];
         } catch (error) {
@@ -94,6 +133,7 @@ export const useUserStore = defineStore('user', () => {
     loginType,
     searchValue,
     searchType,
+    collectedAlbumIds,
 
     // 方法
     setUser,
@@ -101,6 +141,10 @@ export const useUserStore = defineStore('user', () => {
     handleLogout,
     setSearchValue,
     setSearchType,
-    initializeUser
+    initializeUser,
+    initializeCollectedAlbums,
+    addCollectedAlbum,
+    removeCollectedAlbum,
+    isAlbumCollected
   };
 });

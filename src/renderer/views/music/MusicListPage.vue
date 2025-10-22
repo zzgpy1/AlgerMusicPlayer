@@ -153,7 +153,12 @@
             object-fit="cover"
           />
         </div>
-        <div v-if="listInfo?.creator" class="creator-info">
+        <!-- 歌单显示创建者，专辑显示艺术家 -->
+        <div v-if="isAlbum && listInfo?.artist" class="creator-info">
+          <n-avatar round :size="24" :src="getImgUrl(listInfo.artist.picUrl, '50y50')" />
+          <span class="creator-name">{{ listInfo.artist.name }}</span>
+        </div>
+        <div v-else-if="!isAlbum && listInfo?.creator" class="creator-info">
           <n-avatar round :size="24" :src="getImgUrl(listInfo.creator.avatarUrl, '50y50')" />
           <span class="creator-name">{{ listInfo.creator.nickname }}</span>
         </div>
@@ -226,12 +231,16 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 
-import { subscribePlaylist, updatePlaylistTracks } from '@/api/music';
-import { getMusicDetail } from '@/api/music';
+import {
+  getMusicDetail,
+  subscribeAlbum,
+  subscribePlaylist,
+  updatePlaylistTracks
+} from '@/api/music';
 import PlayBottom from '@/components/common/PlayBottom.vue';
 import SongItem from '@/components/common/SongItem.vue';
 import { useDownload } from '@/hooks/useDownload';
-import { useMusicStore, usePlayerStore, useRecommendStore } from '@/store';
+import { useMusicStore, usePlayerStore, useRecommendStore, useUserStore } from '@/store';
 import { SongResult } from '@/types/music';
 import { getImgUrl, isElectron, isMobile, setAnimationClass } from '@/utils';
 import { getLoginErrorMessage, hasPermission } from '@/utils/auth';
@@ -241,11 +250,13 @@ const route = useRoute();
 const playerStore = usePlayerStore();
 const musicStore = useMusicStore();
 const recommendStore = useRecommendStore();
+const userStore = useUserStore();
 const message = useMessage();
 
 // 从路由参数或状态管理获取数据
 const loading = ref(false);
 const isDailyRecommend = computed(() => route.query.type === 'dailyRecommend');
+const isAlbum = computed(() => route.query.type === 'album');
 const name = computed(() => {
   if (isDailyRecommend.value) {
     return t('comp.recommendSinger.songlist'); // 日推的标题
@@ -333,7 +344,7 @@ onMounted(() => {
 });
 
 const getCoverImgUrl = computed(() => {
-  const coverImgUrl = listInfo.value?.coverImgUrl;
+  const coverImgUrl = listInfo.value?.coverImgUrl || listInfo.value?.picUrl;
   if (coverImgUrl) {
     return coverImgUrl;
   }
@@ -801,19 +812,29 @@ const toggleLayout = () => {
   localStorage.setItem('musicListLayout', isCompactLayout.value ? 'compact' : 'normal');
 };
 
-// 初始化歌单收藏状态
+// 初始化收藏状态（支持歌单和专辑）
 const checkCollectionStatus = () => {
-  // 只有歌单类型才能收藏
-  if (route.query.type === 'playlist' && listInfo.value?.id) {
+  const type = route.query.type as string;
+
+  // 歌单类型的收藏检查
+  if (type === 'playlist' && listInfo.value?.id) {
     canCollect.value = true;
-    // 检查是否已收藏
     isCollected.value = listInfo.value.subscribed || false;
-  } else {
+  }
+  // 专辑类型的收藏检查 - 使用 store 判断
+  else if (type === 'album' && listInfo.value?.id) {
+    canCollect.value = true;
+    // 从 userStore 中判断是否已收藏
+    isCollected.value = userStore.isAlbumCollected(listInfo.value.id);
+  }
+  // 其他类型不支持收藏
+  else {
     canCollect.value = false;
+    isCollected.value = false;
   }
 };
 
-// 切换收藏状态
+// 切换收藏状态（支持歌单和专辑）
 const toggleCollect = async () => {
   if (!listInfo.value?.id) return;
 
@@ -823,13 +844,23 @@ const toggleCollect = async () => {
     return;
   }
 
+  const type = route.query.type as string;
+
   try {
     loadingList.value = true;
     const tVal = isCollected.value ? 2 : 1; // 1:收藏, 2:取消收藏
-    const response = await subscribePlaylist({
-      t: tVal,
-      id: listInfo.value.id
-    });
+
+    // 根据类型调用不同的API
+    const response =
+      type === 'album'
+        ? await subscribeAlbum({
+            t: tVal,
+            id: listInfo.value.id
+          })
+        : await subscribePlaylist({
+            t: tVal,
+            id: listInfo.value.id
+          });
 
     // 假设API返回格式是 { data: { code: number, msg?: string } }
     const res = response.data;
@@ -840,13 +871,25 @@ const toggleCollect = async () => {
         ? 'comp.musicList.collectSuccess'
         : 'comp.musicList.cancelCollectSuccess';
       message.success(t(msgKey));
-      // 更新歌单信息
-      listInfo.value.subscribed = isCollected.value;
+
+      // 更新收藏状态
+      if (type === 'album') {
+        // 专辑：更新 store 中的收藏状态
+        if (isCollected.value) {
+          userStore.addCollectedAlbum(listInfo.value.id);
+        } else {
+          userStore.removeCollectedAlbum(listInfo.value.id);
+        }
+        (listInfo.value as any).isSub = isCollected.value;
+      } else {
+        // 歌单：更新 listInfo 的状态
+        listInfo.value.subscribed = isCollected.value;
+      }
     } else {
       throw new Error(res.msg || t('comp.musicList.operationFailed'));
     }
   } catch (error) {
-    console.error('收藏歌单失败:', error);
+    console.error(`收藏${type === 'album' ? '专辑' : '歌单'}失败:`, error);
     message.error(t('comp.musicList.operationFailed'));
   } finally {
     loadingList.value = false;
