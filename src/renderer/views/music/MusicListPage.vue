@@ -152,6 +152,15 @@
             :class="setAnimationClass('animate__fadeIn')"
             object-fit="cover"
           />
+
+          <div v-if="isDailyRecommend && userStore.isVip" class="history-recommend-btn">
+            <n-button tertiary round type="primary" size="small" @click="goToHistoryRecommend">
+              <template #icon>
+                <i class="icon iconfont ri-history-line"></i>
+              </template>
+              {{ t('comp.musicList.historyRecommend') }}
+            </n-button>
+          </div>
         </div>
         <!-- 歌单显示创建者，专辑显示艺术家 -->
         <div v-if="isAlbum && listInfo?.artist" class="creator-info">
@@ -229,7 +238,7 @@ import { useMessage } from 'naive-ui';
 import PinyinMatch from 'pinyin-match';
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import {
   getMusicDetail,
@@ -249,6 +258,7 @@ import { getLoginErrorMessage, hasPermission } from '@/utils/auth';
 
 const { t } = useI18n();
 const route = useRoute();
+const router = useRouter();
 const playerStore = usePlayerStore();
 const musicStore = useMusicStore();
 const recommendStore = useRecommendStore();
@@ -1026,6 +1036,11 @@ const handleBatchDownload = async () => {
   await batchDownloadMusic(selectedSongsList);
   cancelSelect();
 };
+
+// 跳转到历史日推页面
+const goToHistoryRecommend = () => {
+  router.push({ name: 'historyRecommend' });
+};
 </script>
 
 <style scoped lang="scss">
@@ -1057,9 +1072,16 @@ const handleBatchDownload = async () => {
     @apply w-[25%] flex-shrink-0 pr-8 flex flex-col;
 
     .music-cover {
-      @apply w-full aspect-square rounded-2xl overflow-hidden mb-4 min-h-[250px];
+      @apply w-full aspect-square rounded-2xl overflow-hidden mb-4 min-h-[250px] relative;
       .cover-img {
         @apply w-full h-full object-cover;
+      }
+    }
+
+    .history-recommend-btn {
+      @apply mb-4 absolute bottom-1 right-4 z-10;
+      :deep(.n-button) {
+        @apply w-full bg-black bg-opacity-30 text-green-400 hover:bg-opacity-50 hover:text-green-500 transition-colors;
       }
     }
 

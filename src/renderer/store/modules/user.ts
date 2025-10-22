@@ -149,6 +149,13 @@ export const useUserStore = defineStore('user', () => {
     return collectedAlbumIds.value.has(albumId);
   };
 
+  // 判断用户是否为VIP
+  const isVip = computed(() => {
+    if (!user.value) return false;
+    // vipType: 0 非VIP, 11 VIP
+    return user.value.vipType && user.value.vipType !== 0;
+  });
+
   // 初始化
   const initializeUser = async () => {
     const savedUser = getLocalStorageItem<UserData | null>('user', null);
@@ -184,6 +191,7 @@ export const useUserStore = defineStore('user', () => {
     collectedAlbumIds,
     playList,
     albumList,
+    isVip,
 
     // 方法
     setUser,

@@ -117,7 +117,11 @@ export default {
     cancelCollect: '取消收藏',
     addToPlaylist: '添加到播放列表',
     addToPlaylistSuccess: '添加到播放列表成功',
-    songsAlreadyInPlaylist: '歌曲已存在于播放列表中'
+    songsAlreadyInPlaylist: '歌曲已存在于播放列表中',
+    historyRecommend: '历史日推',
+    fetchDatesFailed: '获取日期列表失败',
+    fetchSongsFailed: '获取歌曲列表失败',
+    noSongs: '暂无歌曲'
   },
   playlist: {
     import: {

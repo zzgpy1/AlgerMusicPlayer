@@ -188,3 +188,25 @@ export function subscribeAlbum(params: { t: number; id: number }) {
     params
   });
 }
+
+/**
+ * 获取历史日推可用日期列表
+ */
+export function getHistoryRecommendDates() {
+  return request({
+    url: '/history/recommend/songs',
+    method: 'get'
+  });
+}
+
+/**
+ * 获取历史日推详情数据
+ * @param date 日期，格式：YYYY-MM-DD
+ */
+export function getHistoryRecommendSongs(date: string) {
+  return request({
+    url: '/history/recommend/songs/detail',
+    method: 'get',
+    params: { date }
+  });
+}
