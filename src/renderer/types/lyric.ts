@@ -25,8 +25,8 @@ export const DEFAULT_LYRIC_CONFIG: LyricConfig = {
   lineHeight: 2,
   showTranslation: true,
   theme: 'default',
-  hidePlayBar: false,
-  hideMiniPlayBar: true,
+  hidePlayBar: true,
+  hideMiniPlayBar: false,
   pureModeEnabled: false,
   hideLyrics: false,
   // 移动端默认配置

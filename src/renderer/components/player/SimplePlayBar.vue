@@ -75,7 +75,6 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { allTime, nowTime, playMusic } from '@/hooks/MusicHook';
 import { audioService } from '@/services/audioService';
 import { usePlayerStore } from '@/store/modules/player';
-import { useSettingsStore } from '@/store/modules/settings';
 import { secondToMinute } from '@/utils';
 
 const props = withDefaults(
@@ -88,7 +87,6 @@ const props = withDefaults(
 );
 
 const playerStore = usePlayerStore();
-const settingsStore = useSettingsStore();
 const playBarRef = ref<HTMLElement | null>(null);
 
 // 播放状态
@@ -183,7 +181,7 @@ const openPlayListDrawer = () => {
 };
 
 // 深色模式
-const isDarkMode = computed(() => settingsStore.theme === 'dark' || props.isDark);
+const isDarkMode = computed(() => props.isDark);
 
 // 主题颜色应用函数
 const applyThemeColor = (colorValue: string) => {
