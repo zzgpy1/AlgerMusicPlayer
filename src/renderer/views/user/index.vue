@@ -144,7 +144,6 @@ const userStore = useUserStore();
 const playerStore = usePlayerStore();
 const router = useRouter();
 const userDetail = ref<IUserDetail>();
-const playList = ref<any[]>([]);
 const recordList = ref();
 const infoLoading = ref(false);
 const mounted = ref(true);
@@ -159,34 +158,27 @@ const tabs = [
   { key: 'album', label: 'user.tabs.album' }
 ];
 const currentTab = ref('created');
-const albumList = ref<any[]>([]);
 
 const user = computed(() => userStore.user);
 
 // 创建的歌单（当前用户创建的）
 const createdPlaylists = computed(() => {
   if (!user.value) return [];
-  return playList.value.filter((item) => item.creator?.userId === user.value!.userId);
+  return userStore.playList.filter((item) => item.creator?.userId === user.value!.userId);
 });
 
-// 收藏的歌单（非当前用户创建的）
+// 收藏的歌单（当前用户收藏的）
 const favoritePlaylists = computed(() => {
   if (!user.value) return [];
-  return playList.value.filter((item) => item.creator?.userId !== user.value!.userId);
+  return userStore.playList.filter((item) => item.creator?.userId !== user.value!.userId);
 });
 
 // 当前显示的列表（根据 tab 切换）
 const currentList = computed(() => {
-  switch (currentTab.value) {
-    case 'created':
-      return createdPlaylists.value;
-    case 'favorite':
-      return favoritePlaylists.value;
-    case 'album':
-      return albumList.value;
-    default:
-      return [];
+  if (currentTab.value === 'album') {
+    return userStore.albumList;
   }
+  return currentTab.value === 'created' ? createdPlaylists.value : favoritePlaylists.value;
 });
 
 // 获取封面图片 URL
@@ -226,26 +218,16 @@ onBeforeUnmount(() => {
 
 // 检查登录状态
 const checkLoginStatus = () => {
-  // 优先使用 userStore 中的状态
+  // userStore 的状态已经在 App.vue 中全局初始化，这里只需要检查
   if (userStore.user && userStore.loginType) {
     return true;
   }
 
-  // 如果 store 中没有数据，尝试从 localStorage 恢复
+  // 如果还是没有登录信息，跳转到登录页
   const loginInfo = checkAuthStatus();
-
   if (!loginInfo.isLoggedIn) {
     !isMobile.value && router.push('/login');
     return false;
-  }
-
-  // 恢复用户数据和登录类型到 store
-  if (!userStore.user && loginInfo.user) {
-    userStore.setUser(loginInfo.user);
-  }
-
-  if (!userStore.loginType && loginInfo.loginType) {
-    userStore.setLoginType(loginInfo.loginType);
   }
 
   return true;
@@ -270,22 +252,28 @@ const loadData = async () => {
       return;
     }
 
-    // 使用 Promise.all 并行请求提高效率
-    const [userDetailRes, playlistRes, recordRes] = await Promise.all([
-      getUserDetail(user.value.userId),
-      getUserPlaylist(user.value.userId),
-      getUserRecord(user.value.userId)
-    ]);
+    // 如果 store 中还没有数据，则加载
+    const promises = [getUserDetail(user.value.userId), getUserRecord(user.value.userId)];
+
+    if (userStore.playList.length === 0) {
+      promises.push(getUserPlaylist(user.value.userId));
+    }
+
+    const results = await Promise.all(promises);
 
     if (!mounted.value) return;
 
-    userDetail.value = userDetailRes.data;
-    playList.value = playlistRes.data.playlist;
-    recordList.value = recordRes.data.allData.map((item: any) => ({
+    userDetail.value = results[0].data;
+    recordList.value = results[1].data.allData.map((item: any) => ({
       ...item,
       ...item.song,
       picUrl: item.song.al.picUrl
     }));
+
+    // 如果加载了歌单，更新 store
+    if (results.length > 2 && results[2].data?.playlist) {
+      userStore.playList = results[2].data.playlist;
+    }
   } catch (error: any) {
     console.error('加载用户页面失败:', error);
     if (error.response?.status === 401) {
@@ -304,11 +292,17 @@ const loadData = async () => {
 
 // 加载专辑列表
 const loadAlbumList = async () => {
+  // 如果 store 中已经有数据，直接返回
+  if (userStore.albumList.length > 0) {
+    return;
+  }
+
   try {
     infoLoading.value = true;
     const res = await getUserAlbumSublist({ limit: 100, offset: 0 });
     if (!mounted.value) return;
-    albumList.value = res.data.data || [];
+    // 更新 store 中的专辑列表
+    userStore.albumList = res.data.data || [];
   } catch (error: any) {
     console.error('加载专辑列表失败:', error);
     message.error('加载专辑列表失败');
@@ -348,8 +342,8 @@ watch(currentTab, async (newTab) => {
   if (newTab === 'album') {
     // 刷新收藏专辑列表到 store
     await userStore.initializeCollectedAlbums();
-    // 如果本地列表为空，则加载
-    if (albumList.value.length === 0) {
+    // 如果 store 中列表为空，则加载
+    if (userStore.albumList.length === 0) {
       loadAlbumList();
     }
   }
@@ -487,7 +481,7 @@ const currentLoginType = computed(() => userStore.loginType);
     .record-list {
       @apply rounded-2xl;
       @apply bg-light dark:bg-black;
-      height: calc(100% - 100px);
+      height: calc(100% - 60px);
 
       .record-item {
         @apply flex items-center px-2 mb-2 rounded-2xl bg-light-100 dark:bg-dark-100;

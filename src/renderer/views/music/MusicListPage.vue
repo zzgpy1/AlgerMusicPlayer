@@ -239,6 +239,8 @@ import {
 } from '@/api/music';
 import PlayBottom from '@/components/common/PlayBottom.vue';
 import SongItem from '@/components/common/SongItem.vue';
+import { useAlbumHistory } from '@/hooks/AlbumHistoryHook';
+import { usePlaylistHistory } from '@/hooks/PlaylistHistoryHook';
 import { useDownload } from '@/hooks/useDownload';
 import { useMusicStore, usePlayerStore, useRecommendStore, useUserStore } from '@/store';
 import { SongResult } from '@/types/music';
@@ -252,6 +254,8 @@ const musicStore = useMusicStore();
 const recommendStore = useRecommendStore();
 const userStore = useUserStore();
 const message = useMessage();
+const { addPlaylist } = usePlaylistHistory();
+const { addAlbum } = useAlbumHistory();
 
 // 从路由参数或状态管理获取数据
 const loading = ref(false);
@@ -631,7 +635,7 @@ const handlePlay = async () => {
     playerStore.setPlayList(filteredSongs.value.map(formatSong));
     return;
   }
-
+  saveHistory();
   // 如果完整播放列表已加载完成
   if (isFullPlaylistLoaded.value && completePlaylist.value.length > 0) {
     playerStore.setPlayList(completePlaylist.value.map(formatSong));
@@ -874,11 +878,27 @@ const toggleCollect = async () => {
 
       // 更新收藏状态
       if (type === 'album') {
-        // 专辑：更新 store 中的收藏状态
+        // 专辑：更新 store 中的收藏状态和专辑列表
         if (isCollected.value) {
+          // 添加到收藏ID集合
           userStore.addCollectedAlbum(listInfo.value.id);
+          // 添加到专辑列表
+          const albumData = {
+            id: listInfo.value.id,
+            name: listInfo.value.name,
+            picUrl: listInfo.value.picUrl || listInfo.value.coverImgUrl,
+            size: listInfo.value.size,
+            artist: listInfo.value.artist || listInfo.value.artists?.[0]
+          };
+          userStore.albumList.unshift(albumData);
         } else {
+          // 从收藏ID集合中移除
           userStore.removeCollectedAlbum(listInfo.value.id);
+          // 从专辑列表中移除
+          const index = userStore.albumList.findIndex((album) => album.id === listInfo.value.id);
+          if (index !== -1) {
+            userStore.albumList.splice(index, 1);
+          }
         }
         (listInfo.value as any).isSub = isCollected.value;
       } else {
@@ -899,7 +919,7 @@ const toggleCollect = async () => {
 // 播放全部
 const handlePlayAll = () => {
   if (displayedSongs.value.length === 0) return;
-
+  saveHistory();
   // 如果有搜索关键词，只播放过滤后的歌曲
   if (searchKeyword.value) {
     playerStore.setPlayList(filteredSongs.value.map(formatSong));
@@ -912,6 +932,31 @@ const handlePlayAll = () => {
   playerStore.setPlayList(displayedSongs.value.map(formatSong));
   // 使用setPlay开始播放第一首
   playerStore.setPlay(formatSong(displayedSongs.value[0]));
+};
+
+const saveHistory = () => {
+  if (listInfo.value?.id) {
+    if (isAlbum.value) {
+      // 保存专辑播放记录
+      addAlbum({
+        id: listInfo.value.id,
+        name: listInfo.value.name || '',
+        picUrl: listInfo.value.picUrl || listInfo.value.coverImgUrl || '',
+        size: listInfo.value.size || displayedSongs.value.length,
+        artist: listInfo.value.artist || listInfo.value.artists?.[0]
+      });
+    } else if (route.query.type === 'playlist') {
+      // 保存歌单播放记录
+      addPlaylist({
+        id: listInfo.value.id,
+        name: listInfo.value.name || '',
+        coverImgUrl: listInfo.value.coverImgUrl || listInfo.value.picUrl || '',
+        trackCount: listInfo.value.trackCount || displayedSongs.value.length,
+        playCount: listInfo.value.playCount,
+        creator: listInfo.value.creator
+      });
+    }
+  }
 };
 
 // 添加到播放列表末尾

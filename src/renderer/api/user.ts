@@ -20,6 +20,33 @@ export function getUserRecord(uid: number, type: number = 0) {
   } as any);
 }
 
+// 最近播放-歌曲
+// /record/recent/song
+export function getRecentSongs(limit: number = 100) {
+  return request.get('/record/recent/song', {
+    params: { limit },
+    noRetry: true
+  } as any);
+}
+
+// 最近播放-歌单
+// /record/recent/playlist
+export function getRecentPlaylists(limit: number = 100) {
+  return request.get('/record/recent/playlist', {
+    params: { limit },
+    noRetry: true
+  } as any);
+}
+
+// 最近播放-专辑
+// /record/recent/album
+export function getRecentAlbums(limit: number = 100) {
+  return request.get('/record/recent/album', {
+    params: { limit },
+    noRetry: true
+  } as any);
+}
+
 // 获取用户关注列表
 // /user/follows?uid=32953014
 export function getUserFollows(uid: number, limit: number = 30, offset: number = 0) {
