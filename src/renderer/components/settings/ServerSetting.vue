@@ -64,7 +64,7 @@
 
           <n-form-item>
             <n-space>
-              <n-button type="primary" :disabled="!remoteControlConfig.enabled" @click="saveConfig">
+              <n-button type="primary" @click="saveConfig">
                 {{ t('common.save') }}
               </n-button>
               <n-button @click="resetConfig">
