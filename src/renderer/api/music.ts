@@ -210,3 +210,15 @@ export function getHistoryRecommendSongs(date: string) {
     params: { date }
   });
 }
+
+/**
+ * 心动模式/智能播放
+ * @param params id: 歌曲id, pid: 歌单id, sid: 要开始播放的歌曲id(可选)
+ */
+export function getIntelligenceList(params: { id: number; pid: number; sid?: number }) {
+  return request({
+    url: '/playmode/intelligence/list',
+    method: 'get',
+    params
+  });
+}

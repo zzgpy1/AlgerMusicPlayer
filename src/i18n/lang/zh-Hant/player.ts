@@ -67,7 +67,17 @@ export default {
     unFavorite: '已取消收藏{name}',
     miniPlayBar: '迷你播放列',
     playbackSpeed: '播放速度',
-    advancedControls: '更多設定s'
+    advancedControls: '更多設定',
+    intelligenceMode: {
+      title: '心動模式',
+      needCookieLogin: '請使用 Cookie 方式登入後使用心動模式',
+      noFavoritePlaylist: '未找到我喜歡的音樂歌單',
+      noLikedSongs: '您還沒有喜歡的歌曲',
+      loading: '正在載入心動模式',
+      success: '已載入 {count} 首歌曲',
+      failed: '取得心動模式清單失敗',
+      error: '心動模式播放出錯'
+    }
   },
   eq: {
     title: '等化器',

@@ -67,7 +67,17 @@ export default {
     unFavorite: '已取消收藏{name}',
     miniPlayBar: '迷你播放栏',
     playbackSpeed: '播放速度',
-    advancedControls: '更多设置s'
+    advancedControls: '更多设置',
+    intelligenceMode: {
+      title: '心动模式',
+      needCookieLogin: '请使用 Cookie 方式登录后使用心动模式',
+      noFavoritePlaylist: '未找到我喜欢的音乐歌单',
+      noLikedSongs: '您还没有喜欢的歌曲',
+      loading: '正在加载心动模式',
+      success: '已加载 {count} 首歌曲',
+      failed: '获取心动模式列表失败',
+      error: '心动模式播放出错'
+    }
   },
   eq: {
     title: '均衡器',

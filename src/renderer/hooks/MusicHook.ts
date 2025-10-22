@@ -758,7 +758,6 @@ export const getLrcTimeRange = (index: number) => ({
 watch(
   () => lrcArray.value,
   (newLrcArray) => {
-    console.log('lrcArray.value', lrcArray.value);
     if (newLrcArray.length > 0 && isElectron && isLyricWindowOpen.value) {
       sendLyricToWin();
     }

@@ -66,7 +66,17 @@ export default {
     favorite: 'Favorite {name}',
     unFavorite: 'Unfavorite {name}',
     playbackSpeed: 'Playback Speed',
-    advancedControls: 'Advanced Controls'
+    advancedControls: 'Advanced Controls',
+    intelligenceMode: {
+      title: 'Intelligence Mode',
+      needCookieLogin: 'Please login with Cookie method to use Intelligence Mode',
+      noFavoritePlaylist: 'Favorite playlist not found',
+      noLikedSongs: 'You have no liked songs yet',
+      loading: 'Loading Intelligence Mode',
+      success: 'Loaded {count} songs',
+      failed: 'Failed to get Intelligence Mode list',
+      error: 'Intelligence Mode error'
+    }
   },
   eq: {
     title: 'Equalizer',

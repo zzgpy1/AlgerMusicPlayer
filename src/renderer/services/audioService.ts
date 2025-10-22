@@ -853,10 +853,6 @@ class AudioService {
       const isLoading = this.isLoading();
       const contextRunning = Howler.ctx && Howler.ctx.state === 'running';
 
-      console.log(
-        `实际播放状态检查: playing=${isPlaying}, loading=${isLoading}, contextRunning=${contextRunning}`
-      );
-
       // 只有在三个条件都满足时才认为是真正在播放
       return isPlaying && !isLoading && contextRunning;
     } catch (error) {

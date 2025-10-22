@@ -67,7 +67,17 @@ export default {
     unFavorite: '{name} 즐겨찾기 해제됨',
     miniPlayBar: '미니 재생바',
     playbackSpeed: '재생 속도',
-    advancedControls: '고급 설정'
+    advancedControls: '고급 설정',
+    intelligenceMode: {
+      title: '인텔리전스 모드',
+      needCookieLogin: '쿠키 방식으로 로그인한 후 인텔리전스 모드를 사용할 수 있습니다',
+      noFavoritePlaylist: '내가 좋아하는 음악 재생목록을 찾을 수 없습니다',
+      noLikedSongs: '아직 좋아한 노래가 없습니다',
+      loading: '인텔리전스 모드를 불러오는 중',
+      success: '총 {count}곡을 불러왔습니다',
+      failed: '인텔리전스 모드 목록을 가져오는 데 실패했습니다',
+      error: '인텔리전스 모드 재생 오류'
+    }
   },
   eq: {
     title: '이퀄라이저',

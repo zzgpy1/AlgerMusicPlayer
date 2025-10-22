@@ -330,8 +330,6 @@ export const loadLrc = async (id: string | number): Promise<ILyric> => {
       });
     }
 
-    console.log('lyrics', lyrics);
-
     return {
       lrcTimeArray: times,
       lrcArray: lyrics,
@@ -536,6 +534,13 @@ export const usePlayerStore = defineStore('player', () => {
 
   // 原始播放列表 - 保存切换到随机模式前的顺序
   const originalPlayList = ref<SongResult[]>(getLocalStorageItem('originalPlayList', []));
+
+  // 心动模式状态
+  const isIntelligenceMode = ref(getLocalStorageItem('isIntelligenceMode', false));
+  const intelligenceModeInfo = ref<{
+    playlistId: number;
+    seedSongId: number;
+  } | null>(getLocalStorageItem('intelligenceModeInfo', null));
 
   // 通用洗牌函数 - Fisher-Yates 算法
   const performShuffle = (list: SongResult[], currentSong?: SongResult): SongResult[] => {
@@ -960,7 +965,19 @@ export const usePlayerStore = defineStore('player', () => {
     musicFull.value = value;
   };
 
-  const setPlayList = (list: SongResult[], keepIndex: boolean = false) => {
+  const setPlayList = (
+    list: SongResult[],
+    keepIndex: boolean = false,
+    fromIntelligenceMode: boolean = false
+  ) => {
+    // 如果不是从心动模式调用，则清除心动模式状态
+    if (!fromIntelligenceMode && isIntelligenceMode.value) {
+      isIntelligenceMode.value = false;
+      intelligenceModeInfo.value = null;
+      localStorage.removeItem('isIntelligenceMode');
+      localStorage.removeItem('intelligenceModeInfo');
+    }
+
     if (list.length === 0) {
       playList.value = [];
       playListIndex.value = 0;
@@ -1341,10 +1358,21 @@ export const usePlayerStore = defineStore('player', () => {
   // 节流
   const prevPlay = useThrottleFn(_prevPlay, 500);
 
-  const togglePlayMode = () => {
-    const newMode = (playMode.value + 1) % 3;
+  const togglePlayMode = async () => {
+    const userStore = useUserStore();
+    const wasIntelligence = playMode.value === 3;
+    const newMode = (playMode.value + 1) % 4; // 扩展到4种模式
     const wasRandom = playMode.value === 2;
     const isRandom = newMode === 2;
+    const isIntelligence = newMode === 3;
+
+    // 如果要切换到心动模式，但用户未使用cookie登录，则跳过心动模式
+    if (isIntelligence && (!userStore.user || userStore.loginType !== 'cookie')) {
+      console.log('跳过心动模式：需要cookie登录');
+      playMode.value = 0; // 跳到顺序模式
+      localStorage.setItem('playMode', JSON.stringify(playMode.value));
+      return;
+    }
 
     playMode.value = newMode;
     localStorage.setItem('playMode', JSON.stringify(playMode.value));
@@ -1356,9 +1384,24 @@ export const usePlayerStore = defineStore('player', () => {
     }
 
     // 当从随机模式切换出去时，恢复原始顺序
-    if (!isRandom && wasRandom) {
+    if (!isRandom && wasRandom && !isIntelligence) {
       restoreOriginalOrder();
       console.log('切换出随机模式，恢复原始顺序');
+    }
+
+    // 当切换到心动模式时，触发心动模式播放
+    if (isIntelligence && !wasIntelligence) {
+      console.log('切换到心动模式');
+      await playIntelligenceMode();
+    }
+
+    // 当从心动模式切换出去时，清除心动模式状态
+    if (!isIntelligence && wasIntelligence) {
+      console.log('退出心动模式');
+      isIntelligenceMode.value = false;
+      intelligenceModeInfo.value = null;
+      localStorage.setItem('isIntelligenceMode', JSON.stringify(false));
+      localStorage.removeItem('intelligenceModeInfo');
     }
   };
 
@@ -1444,9 +1487,12 @@ export const usePlayerStore = defineStore('player', () => {
     const settingStore = useSettingsStore();
     const savedPlayList = getLocalStorageItem('playList', []);
     const savedPlayMusic = getLocalStorageItem<SongResult | null>('currentPlayMusic', null);
+    // 恢复心动模式状态
+    const savedIntelligenceMode = getLocalStorageItem('isIntelligenceMode', false);
 
     if (savedPlayList.length > 0) {
-      setPlayList(savedPlayList);
+      // 如果是心动模式，保持状态
+      setPlayList(savedPlayList, false, savedIntelligenceMode);
 
       // 重启后恢复随机播放状态
       if (playMode.value === 2) {
@@ -1747,6 +1793,86 @@ export const usePlayerStore = defineStore('player', () => {
     return newVolume;
   };
 
+  // 心动模式播放
+  const playIntelligenceMode = async () => {
+    const userStore = useUserStore();
+    const { t } = i18n.global;
+
+    // 检查是否使用cookie登录
+    if (!userStore.user || userStore.loginType !== 'cookie') {
+      message.warning(t('player.playBar.intelligenceMode.needCookieLogin'));
+      return;
+    }
+
+    try {
+      // 获取用户歌单列表
+      if (userStore.playList.length === 0) {
+        await userStore.initializePlaylist();
+      }
+
+      // 找到"我喜欢的音乐"歌单（通常是第一个歌单）
+      const favoritePlaylist = userStore.playList.find(
+        (pl: any) => pl.userId === userStore.user?.userId && pl.specialType === 5
+      );
+
+      if (!favoritePlaylist) {
+        message.warning(t('player.playBar.intelligenceMode.noFavoritePlaylist'));
+        return;
+      }
+
+      // 获取喜欢的歌曲列表
+      const likedListRes = await getLikedList(userStore.user.userId);
+      const likedIds = likedListRes.data?.ids || [];
+
+      if (likedIds.length === 0) {
+        message.warning(t('player.playBar.intelligenceMode.noLikedSongs'));
+        return;
+      }
+
+      // 随机选择一首歌曲
+      const randomSongId = likedIds[Math.floor(Math.random() * likedIds.length)];
+
+      // 调用心动模式API
+      const { getIntelligenceList } = await import('@/api/music');
+      const res = await getIntelligenceList({
+        id: randomSongId,
+        pid: favoritePlaylist.id
+      });
+
+      if (res.data?.data && res.data.data.length > 0) {
+        const intelligenceSongs = res.data.data.map((item: any) => ({
+          id: item.id,
+          name: item.songInfo.name,
+          picUrl: item.songInfo.al?.picUrl,
+          source: 'netease' as Platform,
+          song: item.songInfo,
+          ...item.songInfo,
+          playLoading: false
+        }));
+
+        // 设置心动模式状态
+        isIntelligenceMode.value = true;
+        intelligenceModeInfo.value = {
+          playlistId: favoritePlaylist.id,
+          seedSongId: randomSongId
+        };
+        playMode.value = 3; // 设置播放模式为心动模式
+        localStorage.setItem('isIntelligenceMode', JSON.stringify(true));
+        localStorage.setItem('intelligenceModeInfo', JSON.stringify(intelligenceModeInfo.value));
+        localStorage.setItem('playMode', JSON.stringify(playMode.value));
+
+        // 替换播放列表并开始播放
+        await setPlayList(intelligenceSongs, false, true);
+        await handlePlayMusic(intelligenceSongs[0], true);
+      } else {
+        message.error(t('player.playBar.intelligenceMode.failed'));
+      }
+    } catch (error) {
+      console.error('心动模式播放失败:', error);
+      message.error(t('player.playBar.intelligenceMode.error'));
+    }
+  };
+
   return {
     play,
     isPlay,
@@ -1812,6 +1938,11 @@ export const usePlayerStore = defineStore('player', () => {
     originalPlayList,
     shufflePlayList,
     restoreOriginalOrder,
-    preloadNextSongs
+    preloadNextSongs,
+
+    // 心动模式
+    playIntelligenceMode,
+    isIntelligenceMode,
+    intelligenceModeInfo
   };
 });

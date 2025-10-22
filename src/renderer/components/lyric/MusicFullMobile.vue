@@ -343,7 +343,7 @@
             <i class="ri-arrow-down-s-line"></i>
           </div>
           <div class="side-button" @click="togglePlayMode">
-            <i :class="playModeIcon"></i>
+            <i :class="[playModeIcon, { 'intelligence-active': playMode === 3 }]"></i>
           </div>
           <div class="main-button prev" @click="prevSong">
             <i class="ri-skip-back-fill"></i>
@@ -382,6 +382,7 @@ import {
   useLyricProgress
 } from '@/hooks/MusicHook';
 import { useArtist } from '@/hooks/useArtist';
+import { usePlayMode } from '@/hooks/usePlayMode';
 import { usePlayerStore } from '@/store/modules/player';
 import { DEFAULT_LYRIC_CONFIG, LyricConfig } from '@/types/lyric';
 import { getImgUrl, secondToMinute } from '@/utils';
@@ -394,19 +395,9 @@ const playerStore = usePlayerStore();
 // 播放控制相关
 const play = computed(() => playerStore.isPlay);
 const playIcon = computed(() => (play.value ? 'ri-pause-fill' : 'ri-play-fill'));
-const playMode = computed(() => playerStore.playMode);
-const playModeIcon = computed(() => {
-  switch (playMode.value) {
-    case 0:
-      return 'ri-repeat-line';
-    case 1:
-      return 'ri-repeat-one-line';
-    case 2:
-      return 'ri-shuffle-line';
-    default:
-      return 'ri-repeat-line';
-  }
-});
+
+// 播放模式
+const { playMode, playModeIcon, playModeText, togglePlayMode: togglePlayModeBase } = usePlayMode();
 // 打开播放列表
 const showPlaylist = () => {
   playerStore.setPlayListDrawerVisible(true);
@@ -963,12 +954,8 @@ const prevSong = () => {
 };
 
 const togglePlayMode = () => {
-  playerStore.togglePlayMode();
-  showBottomToast(
-    [t('player.playMode.sequence'), t('player.playMode.loop'), t('player.playMode.random')][
-      playMode.value
-    ]
-  );
+  togglePlayModeBase();
+  showBottomToast(playModeText.value);
 };
 
 const closeMusicFull = () => {
@@ -1525,6 +1512,10 @@ const getWordStyle = (lineIndex: number, _wordIndex: number, word: any) => {
           i {
             @apply text-2xl;
             color: var(--text-color-primary);
+
+            &.intelligence-active {
+              @apply text-green-500;
+            }
           }
 
           &:hover {

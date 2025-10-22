@@ -67,7 +67,17 @@ export default {
     unFavorite: '{name}をお気に入りから削除しました',
     miniPlayBar: 'ミニ再生バー',
     playbackSpeed: '再生速度',
-    advancedControls: 'その他の設定'
+    advancedControls: 'その他の設定',
+    intelligenceMode: {
+      title: 'インテリジェンスモード',
+      needCookieLogin: 'Cookie方式でログインしてからインテリジェンスモードを使用してください',
+      noFavoritePlaylist: '「お気に入りの音楽」プレイリストが見つかりません',
+      noLikedSongs: 'まだ「いいね」した楽曲がありません',
+      loading: 'インテリジェンスモードを読み込み中',
+      success: '{count} 曲を読み込みました',
+      failed: 'インテリジェンスモードのリスト取得に失敗しました',
+      error: 'インテリジェンスモードの再生でエラーが発生しました'
+    }
   },
   eq: {
     title: 'イコライザー',

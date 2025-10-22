@@ -105,15 +105,23 @@
       </div>
       <n-tooltip v-if="!isMobile" trigger="hover" :z-index="9999999">
         <template #trigger>
-          <i class="iconfont" :class="playModeIcon" @click="togglePlayMode"></i>
+          <i
+            class="iconfont"
+            :class="[playModeIcon, { 'intelligence-active': playMode === 3 }]"
+            @click="togglePlayMode"
+          ></i>
         </template>
         {{ playModeText }}
       </n-tooltip>
       <n-tooltip v-if="!isMobile" trigger="hover" :z-index="9999999">
         <template #trigger>
           <i
-            class="iconfont icon-likefill"
-            :class="{ 'like-active': isFavorite }"
+            class="iconfont"
+            :class="{
+              'like-active': isFavorite,
+              'ri-heart-3-fill': isFavorite,
+              'ri-heart-3-line': !isFavorite
+            }"
             @click="toggleFavorite"
           ></i>
         </template>
@@ -174,6 +182,7 @@ import {
   textColors
 } from '@/hooks/MusicHook';
 import { useArtist } from '@/hooks/useArtist';
+import { usePlayMode } from '@/hooks/usePlayMode';
 import { audioService } from '@/services/audioService';
 import { isBilibiliIdMatch, usePlayerStore } from '@/store/modules/player';
 import { useSettingsStore } from '@/store/modules/settings';
@@ -282,38 +291,10 @@ const handleVolumeWheel = (e: WheelEvent) => {
 };
 
 // 播放模式
-const playMode = computed(() => playerStore.playMode);
-const playModeIcon = computed(() => {
-  switch (playMode.value) {
-    case 0:
-      return 'ri-repeat-2-line';
-    case 1:
-      return 'ri-repeat-one-line';
-    case 2:
-      return 'ri-shuffle-line';
-    default:
-      return 'ri-repeat-2-line';
-  }
-});
-const playModeText = computed(() => {
-  switch (playMode.value) {
-    case 0:
-      return t('player.playBar.playMode.sequence');
-    case 1:
-      return t('player.playBar.playMode.loop');
-    case 2:
-      return t('player.playBar.playMode.random');
-    default:
-      return t('player.playBar.playMode.sequence');
-  }
-});
+const { playMode, playModeIcon, playModeText, togglePlayMode } = usePlayMode();
 
 // 播放速度控制
 const { playbackRate } = storeToRefs(playerStore);
-// 切换播放模式
-const togglePlayMode = () => {
-  playerStore.togglePlayMode();
-};
 
 function handleNext() {
   playerStore.nextPlay();
@@ -643,6 +624,10 @@ const openPlayListDrawer = () => {
 
 .like-active {
   @apply text-red-500 hover:text-red-600 !important;
+}
+
+.intelligence-active {
+  @apply text-green-500 hover:text-green-600 !important;
 }
 
 .disabled-icon {
