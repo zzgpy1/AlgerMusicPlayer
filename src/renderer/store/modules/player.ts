@@ -445,6 +445,31 @@ const preloadNextSong = (nextSongUrl: string) => {
   }
 };
 
+// 预加载封面图片
+const preloadCoverImage = (picUrl: string) => {
+  if (!picUrl) return;
+
+  try {
+    const imageUrl = getImgUrl(picUrl, '500y500');
+    console.log('预加载封面图片:', imageUrl);
+
+    // 创建一个 Image 对象来预加载图片
+    const img = new Image();
+    img.src = imageUrl;
+
+    // 可选：添加加载完成和错误的回调
+    img.onload = () => {
+      console.log('封面图片预加载成功:', imageUrl);
+    };
+
+    img.onerror = () => {
+      console.error('封面图片预加载失败:', imageUrl);
+    };
+  } catch (error) {
+    console.error('预加载封面图片出错:', error);
+  }
+};
+
 const fetchSongs = async (playList: SongResult[], startIndex: number, endIndex: number) => {
   try {
     const songs = playList.slice(Math.max(0, startIndex), Math.min(endIndex, playList.length));
@@ -478,8 +503,14 @@ const fetchSongs = async (playList: SongResult[], startIndex: number, endIndex: 
       }
     });
 
-    if (nextSong && nextSong.playMusicUrl) {
-      preloadNextSong(nextSong.playMusicUrl);
+    // 预加载下一首歌曲的音频和封面
+    if (nextSong) {
+      if (nextSong.playMusicUrl) {
+        preloadNextSong(nextSong.playMusicUrl);
+      }
+      if (nextSong.picUrl) {
+        preloadCoverImage(nextSong.picUrl);
+      }
     }
   } catch (error) {
     console.error('获取歌曲列表失败:', error);
