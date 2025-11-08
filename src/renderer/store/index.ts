@@ -1,9 +1,13 @@
 import { createPinia } from 'pinia';
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
+import { markRaw } from 'vue';
 
 import router from '@/router';
 
 // 创建 pinia 实例
 const pinia = createPinia();
+
+pinia.use(piniaPluginPersistedstate);
 
 // 添加路由到 Pinia
 pinia.use(({ store }) => {

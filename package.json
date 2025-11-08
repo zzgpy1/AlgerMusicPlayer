@@ -47,6 +47,7 @@
     "netease-cloud-music-api-alger": "^4.26.1",
     "node-id3": "^0.2.9",
     "node-machine-id": "^1.1.12",
+    "pinia-plugin-persistedstate": "^4.5.0",
     "sharp": "^0.34.3",
     "vue-i18n": "^11.1.3"
   },
