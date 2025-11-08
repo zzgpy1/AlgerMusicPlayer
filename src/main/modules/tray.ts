@@ -59,6 +59,13 @@ function getSongTitle(song: SongInfo | null): string {
   return artistStr ? `${song.name} - ${artistStr}` : song.name;
 }
 
+// 截断歌曲标题，防止菜单中显示过长
+function getTruncatedSongTitle(song: SongInfo | null, maxLength: number = 14): string {
+  const fullTitle = getSongTitle(song);
+  if (fullTitle.length <= maxLength) return fullTitle;
+  return fullTitle.slice(0, maxLength) + '...';
+}
+
 // 更新当前播放的音乐信息
 export function updateCurrentSong(song: SongInfo | null) {
   currentSong = song;
@@ -143,7 +150,7 @@ export function updateTrayMenu(mainWindow: BrowserWindow) {
     if (currentSong) {
       menu.append(
         new MenuItem({
-          label: getSongTitle(currentSong),
+          label: getTruncatedSongTitle(currentSong),
           enabled: false,
           type: 'normal'
         })
@@ -250,7 +257,7 @@ export function updateTrayMenu(mainWindow: BrowserWindow) {
       ...((currentSong
         ? [
             {
-              label: getSongTitle(currentSong),
+              label: getTruncatedSongTitle(currentSong),
               enabled: false,
               type: 'normal'
             },

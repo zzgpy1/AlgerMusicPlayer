@@ -30,6 +30,8 @@ resources/android/**/*
 android/app/release
 
 .cursor
+.windsurf
+
 
 .auto-imports.d.ts
 .components.d.ts
