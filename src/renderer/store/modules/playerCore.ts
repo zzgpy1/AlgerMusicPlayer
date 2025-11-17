@@ -208,6 +208,27 @@ export const usePlayerCoreStore = defineStore(
         playMusicUrl.value = updatedPlayMusic.playMusicUrl as string;
         music.playMusicUrl = updatedPlayMusic.playMusicUrl as string;
 
+        // 在拆分后补充：触发预加载下一首/下下首（与 playlist store 保持一致）
+        try {
+          const { usePlaylistStore } = await import('./playlist');
+          const playlistStore = usePlaylistStore();
+          // 基于当前歌曲在播放列表中的位置来预加载
+          const list = playlistStore.playList;
+          if (Array.isArray(list) && list.length > 0) {
+            const idx = list.findIndex(
+              (item: SongResult) =>
+                item.id === updatedPlayMusic.id && item.source === updatedPlayMusic.source
+            );
+            if (idx !== -1) {
+              setTimeout(() => {
+                playlistStore.preloadNextSongs(idx);
+              }, 3000);
+            }
+          }
+        } catch (e) {
+          console.warn('预加载触发失败（可能是依赖未加载或循环依赖），已忽略:', e);
+        }
+
         let playInProgress = false;
 
         try {
@@ -319,6 +340,19 @@ export const usePlayerCoreStore = defineStore(
               });
             }
           }, 1000);
+        } else {
+          // 非操作锁错误：尝试切到下一首，避免在解析失败时卡住
+          try {
+            const { usePlaylistStore } = await import('./playlist');
+            const playlistStore = usePlaylistStore();
+            if (Array.isArray(playlistStore.playList) && playlistStore.playList.length > 1) {
+              setTimeout(() => {
+                playlistStore.nextPlay();
+              }, 300);
+            }
+          } catch (e) {
+            console.warn('播放失败回退到下一首时发生问题（可能依赖未加载）:', e);
+          }
         }
 
         message.error(i18n.global.t('player.playFailed'));

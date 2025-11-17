@@ -116,6 +116,7 @@ if (isElectron) {
 useAppShortcuts();
 
 onMounted(async () => {
+  playerStore.setIsPlay(false);
   if (isLyricWindow.value) {
     return;
   }
