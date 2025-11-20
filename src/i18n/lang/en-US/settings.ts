@@ -10,7 +10,7 @@ export default {
     network: 'Network Settings',
     system: 'System Management',
     donation: 'Donation',
-    regard: 'About'
+    about: 'About'
   },
   basic: {
     themeMode: 'Theme Mode',
@@ -114,7 +114,11 @@ export default {
       notImported: 'No custom source imported yet.',
       importSuccess: 'Successfully imported source: {name}',
       importFailed: 'Import failed: {message}',
-      enableHint: 'Import a JSON config file to enable'
+      enableHint: 'Import a JSON config file to enable',
+      status: {
+        imported: 'Custom Source Imported',
+        notImported: 'Not Imported'
+      }
     }
   },
   application: {

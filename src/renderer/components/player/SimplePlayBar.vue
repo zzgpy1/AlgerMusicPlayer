@@ -4,14 +4,19 @@
       <!-- 顶部进度条和时间 -->
       <div class="top-section">
         <!-- 进度条 -->
-        <div class="progress-bar" @click="handleProgressClick">
+        <div
+          class="progress-bar"
+          :class="{ 'is-dragging': isDragging }"
+          @mousedown="handleProgressMouseDown"
+          @click.stop="handleProgressClick"
+        >
           <div class="progress-track"></div>
-          <div class="progress-fill" :style="{ width: `${(nowTime / allTime) * 100}%` }"></div>
+          <div class="progress-fill" :style="{ width: `${progressPercentage}%` }"></div>
         </div>
 
         <!-- 时间显示 -->
         <div class="time-display">
-          <span class="current-time">{{ formatTime(nowTime) }}</span>
+          <span class="current-time">{{ formatTime(displayTime) }}</span>
           <span class="total-time">{{ formatTime(allTime) }}</span>
         </div>
       </div>
@@ -150,11 +155,81 @@ const playMusicEvent = async () => {
 };
 
 // 进度条控制
+const isDragging = ref(false);
+const dragProgress = ref(0); // 拖拽时的预览进度 (0-100)
+
+// 计算当前显示的进度百分比
+const progressPercentage = computed(() => {
+  if (isDragging.value) {
+    return dragProgress.value;
+  }
+  if (allTime.value === 0) return 0;
+  return (nowTime.value / allTime.value) * 100;
+});
+
+// 计算显示的时间
+const displayTime = computed(() => {
+  if (isDragging.value) {
+    return (dragProgress.value / 100) * allTime.value;
+  }
+  return nowTime.value;
+});
+
+// 计算进度百分比的辅助函数
+const calculateProgress = (clientX: number, element: HTMLElement): number => {
+  const rect = element.getBoundingClientRect();
+  const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  return percent * 100;
+};
+
+// 更新音频进度
+const seekToProgress = (percentage: number) => {
+  const targetTime = (percentage / 100) * allTime.value;
+  audioService.seek(targetTime);
+  // 不立即更新 nowTime,让音频服务的回调来更新,避免不同步
+};
+
+// 鼠标按下开始拖拽
+const handleProgressMouseDown = (e: MouseEvent) => {
+  if (e.button !== 0) return; // 只响应左键
+
+  const target = e.currentTarget as HTMLElement;
+  isDragging.value = true;
+  dragProgress.value = calculateProgress(e.clientX, target);
+
+  // 添加全局鼠标移动和释放监听
+  const handleMouseMove = (moveEvent: MouseEvent) => {
+    if (isDragging.value) {
+      dragProgress.value = calculateProgress(moveEvent.clientX, target);
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging.value) {
+      // 拖拽结束,执行跳转
+      seekToProgress(dragProgress.value);
+      isDragging.value = false;
+    }
+    // 移除事件监听
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
+  document.addEventListener('mousemove', handleMouseMove);
+  document.addEventListener('mouseup', handleMouseUp);
+
+  // 防止文本选择
+  e.preventDefault();
+};
+
+// 点击进度条跳转
 const handleProgressClick = (e: MouseEvent) => {
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-  const percent = (e.clientX - rect.left) / rect.width;
-  audioService.seek(allTime.value * percent);
-  nowTime.value = allTime.value * percent;
+  // 如果正在拖拽,不处理点击事件
+  if (isDragging.value) return;
+
+  const target = e.currentTarget as HTMLElement;
+  const percentage = calculateProgress(e.clientX, target);
+  seekToProgress(percentage);
 };
 
 // 格式化时间
@@ -348,6 +423,7 @@ onMounted(() => {
 
   .progress-bar {
     @apply relative cursor-pointer h-2 mb-2 w-full;
+    user-select: none;
 
     .progress-track {
       @apply absolute inset-0 rounded-full transition-all duration-150;
@@ -363,10 +439,6 @@ onMounted(() => {
     &:hover {
       .progress-track {
         background-color: var(--track-color-hover);
-      }
-      .progress-track,
-      .progress-fill {
-        @apply h-full;
       }
 
       .progress-fill {

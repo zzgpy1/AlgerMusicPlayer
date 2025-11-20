@@ -83,7 +83,7 @@ export async function handleShortcutAction(action: string) {
           await audioService.pause();
           showToast(t('player.playBar.pause'), 'ri-pause-circle-line');
         } else {
-          await audioService.play();
+          await audioService.getCurrentSound()?.play();
           showToast(t('player.playBar.play'), 'ri-play-circle-line');
         }
         break;

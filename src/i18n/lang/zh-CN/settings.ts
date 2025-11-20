@@ -10,7 +10,7 @@ export default {
     network: '网络设置',
     system: '系统管理',
     donation: '捐赠支持',
-    regard: '关于'
+    about: '关于'
   },
   basic: {
     themeMode: '主题模式',
@@ -111,7 +111,11 @@ export default {
       notImported: '尚未导入自定义音源。',
       importSuccess: '成功导入音源: {name}',
       importFailed: '导入失败: {message}',
-      enableHint: '请先导入 JSON 配置文件才能启用'
+      enableHint: '请先导入 JSON 配置文件才能启用',
+      status: {
+        imported: '已导入自定义音源',
+        notImported: '未导入'
+      }
     }
   },
   application: {

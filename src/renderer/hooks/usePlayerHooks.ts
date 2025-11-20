@@ -1,10 +1,10 @@
 import { cloneDeep } from 'lodash';
 import { createDiscreteApi } from 'naive-ui';
-import { ref } from 'vue';
 
 import i18n from '@/../i18n/renderer';
 import { getBilibiliAudioUrl } from '@/api/bilibili';
 import { getMusicLrc, getMusicUrl, getParsingMusicUrl } from '@/api/music';
+import { playbackRequestManager } from '@/services/playbackRequestManager';
 import type { ILyric, ILyricText, IWordData, SongResult } from '@/types/music';
 import { getImgUrl } from '@/utils';
 import { getImageLinearBackground } from '@/utils/linearColor';
@@ -12,16 +12,14 @@ import { parseLyrics as parseYrcLyrics } from '@/utils/yrcParser';
 
 const { message } = createDiscreteApi(['message']);
 
-// 预加载的音频实例
-export const preloadingSounds = ref<Howl[]>([]);
-
 /**
  * 获取歌曲播放URL（独立函数）
  */
 export const getSongUrl = async (
   id: string | number,
   songData: SongResult,
-  isDownloaded: boolean = false
+  isDownloaded: boolean = false,
+  requestId?: string
 ) => {
   const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
 
@@ -30,6 +28,12 @@ export const getSongUrl = async (
   const settingsStore = useSettingsStore();
 
   try {
+    // 在开始处理前验证请求
+    if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+      console.log(`[getSongUrl] 请求已失效: ${requestId}`);
+      throw new Error('Request cancelled');
+    }
+
     if (songData.playMusicUrl) {
       return songData.playMusicUrl;
     }
@@ -42,6 +46,11 @@ export const getSongUrl = async (
             songData.bilibiliData.bvid,
             songData.bilibiliData.cid
           );
+          // 验证请求
+          if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+            console.log(`[getSongUrl] 获取B站URL后请求已失效: ${requestId}`);
+            throw new Error('Request cancelled');
+          }
           return songData.playMusicUrl;
         } catch (error) {
           console.error('重启后获取B站音频URL失败:', error);
@@ -78,6 +87,12 @@ export const getSongUrl = async (
           settingsStore.setData.musicQuality || 'higher'
         );
 
+        // 验证请求
+        if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+          console.log(`[getSongUrl] 自定义API解析后请求已失效: ${requestId}`);
+          throw new Error('Request cancelled');
+        }
+
         if (
           customResult &&
           customResult.data &&
@@ -93,6 +108,9 @@ export const getSongUrl = async (
         }
       } catch (error) {
         console.error('调用自定义API时发生错误:', error);
+        if ((error as Error).message === 'Request cancelled') {
+          throw error;
+        }
         message.error(i18n.global.t('player.reparse.customApiError'));
       }
     }
@@ -103,18 +121,35 @@ export const getSongUrl = async (
         console.log(`使用自定义音源解析歌曲 ID: ${songId}`);
         const res = await getParsingMusicUrl(numericId, cloneDeep(songData));
         console.log('res', res);
+
+        // 验证请求
+        if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+          console.log(`[getSongUrl] 自定义音源解析后请求已失效: ${requestId}`);
+          throw new Error('Request cancelled');
+        }
+
         if (res && res.data && res.data.data && res.data.data.url) {
           return res.data.data.url;
         }
         console.warn('自定义音源解析失败，使用默认音源');
       } catch (error) {
         console.error('error', error);
+        if ((error as Error).message === 'Request cancelled') {
+          throw error;
+        }
         console.error('自定义音源解析出错:', error);
       }
     }
 
     // 正常获取URL流程
     const { data } = await getMusicUrl(numericId, isDownloaded);
+
+    // 验证请求
+    if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+      console.log(`[getSongUrl] 获取官方URL后请求已失效: ${requestId}`);
+      throw new Error('Request cancelled');
+    }
+
     if (data && data.data && data.data[0]) {
       const songDetail = data.data[0];
       const hasNoUrl = !songDetail.url;
@@ -123,6 +158,11 @@ export const getSongUrl = async (
       if (hasNoUrl || isTrial) {
         console.log(`官方URL无效 (无URL: ${hasNoUrl}, 试听: ${isTrial})，进入内置备用解析...`);
         const res = await getParsingMusicUrl(numericId, cloneDeep(songData));
+        // 验证请求
+        if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+          console.log(`[getSongUrl] 备用解析后请求已失效: ${requestId}`);
+          throw new Error('Request cancelled');
+        }
         if (isDownloaded) return res?.data?.data as any;
         return res?.data?.data?.url || null;
       }
@@ -134,9 +174,17 @@ export const getSongUrl = async (
 
     console.log('官方API返回数据结构异常，进入内置备用解析...');
     const res = await getParsingMusicUrl(numericId, cloneDeep(songData));
+    // 验证请求
+    if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+      console.log(`[getSongUrl] 备用解析后请求已失效: ${requestId}`);
+      throw new Error('Request cancelled');
+    }
     if (isDownloaded) return res?.data?.data as any;
     return res?.data?.data?.url || null;
   } catch (error) {
+    if ((error as Error).message === 'Request cancelled') {
+      throw error;
+    }
     console.error('官方API请求失败，进入内置备用解析流程:', error);
     const res = await getParsingMusicUrl(numericId, cloneDeep(songData));
     if (isDownloaded) return res?.data?.data as any;
@@ -299,7 +347,13 @@ export const useLyrics = () => {
 export const useSongDetail = () => {
   const { getSongUrl } = useSongUrl();
 
-  const getSongDetail = async (playMusic: SongResult) => {
+  const getSongDetail = async (playMusic: SongResult, requestId?: string) => {
+    // 验证请求
+    if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+      console.log(`[getSongDetail] 请求已失效: ${requestId}`);
+      throw new Error('Request cancelled');
+    }
+
     if (playMusic.source === 'bilibili') {
       try {
         if (!playMusic.playMusicUrl && playMusic.bilibiliData) {
@@ -307,6 +361,12 @@ export const useSongDetail = () => {
             playMusic.bilibiliData.bvid,
             playMusic.bilibiliData.cid
           );
+        }
+
+        // 验证请求
+        if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+          console.log(`[getSongDetail] B站URL获取后请求已失效: ${requestId}`);
+          throw new Error('Request cancelled');
         }
 
         playMusic.playLoading = false;
@@ -324,7 +384,15 @@ export const useSongDetail = () => {
     }
 
     try {
-      const playMusicUrl = playMusic.playMusicUrl || (await getSongUrl(playMusic.id, playMusic));
+      const playMusicUrl =
+        playMusic.playMusicUrl || (await getSongUrl(playMusic.id, playMusic, false, requestId));
+
+      // 验证请求
+      if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+        console.log(`[getSongDetail] URL获取后请求已失效: ${requestId}`);
+        throw new Error('Request cancelled');
+      }
+
       playMusic.createdAt = Date.now();
       // 半小时后过期
       playMusic.expiredAt = playMusic.createdAt + 1800000;
@@ -333,9 +401,18 @@ export const useSongDetail = () => {
           ? playMusic
           : await getImageLinearBackground(getImgUrl(playMusic?.picUrl, '30y30'));
 
+      // 验证请求
+      if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
+        console.log(`[getSongDetail] 背景色获取后请求已失效: ${requestId}`);
+        throw new Error('Request cancelled');
+      }
+
       playMusic.playLoading = false;
       return { ...playMusic, playMusicUrl, backgroundColor, primaryColor } as SongResult;
     } catch (error) {
+      if ((error as Error).message === 'Request cancelled') {
+        throw error;
+      }
       console.error('获取音频URL失败:', error);
       playMusic.playLoading = false;
       throw error;
@@ -343,61 +420,4 @@ export const useSongDetail = () => {
   };
 
   return { getSongDetail };
-};
-
-/**
- * 预加载下一首歌曲音频
- */
-export const preloadNextSong = (nextSongUrl: string): Howl | null => {
-  try {
-    // 清理多余的预加载实例，确保最多只有2个预加载音频
-    while (preloadingSounds.value.length >= 2) {
-      const oldestSound = preloadingSounds.value.shift();
-      if (oldestSound) {
-        try {
-          oldestSound.stop();
-          oldestSound.unload();
-        } catch (e) {
-          console.error('清理预加载音频实例失败:', e);
-        }
-      }
-    }
-
-    // 检查这个URL是否已经在预加载列表中
-    const existingPreload = preloadingSounds.value.find(
-      (sound) => (sound as any)._src === nextSongUrl
-    );
-    if (existingPreload) {
-      console.log('该音频已在预加载列表中，跳过:', nextSongUrl);
-      return existingPreload;
-    }
-
-    const sound = new Howl({
-      src: [nextSongUrl],
-      html5: true,
-      preload: true,
-      autoplay: false
-    });
-
-    preloadingSounds.value.push(sound);
-
-    sound.on('loaderror', () => {
-      console.error('预加载音频失败:', nextSongUrl);
-      const index = preloadingSounds.value.indexOf(sound);
-      if (index > -1) {
-        preloadingSounds.value.splice(index, 1);
-      }
-      try {
-        sound.stop();
-        sound.unload();
-      } catch (e) {
-        console.error('卸载预加载音频失败:', e);
-      }
-    });
-
-    return sound;
-  } catch (error) {
-    console.error('预加载音频出错:', error);
-    return null;
-  }
 };

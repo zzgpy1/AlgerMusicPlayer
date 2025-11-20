@@ -10,7 +10,7 @@ export default {
     network: '네트워크 설정',
     system: '시스템 관리',
     donation: '후원 지원',
-    regard: '정보'
+    about: '정보'
   },
   basic: {
     themeMode: '테마 모드',
@@ -112,7 +112,11 @@ export default {
       notImported: '아직 사용자 지정 음원을 가져오지 않았습니다.',
       importSuccess: '음원 가져오기 성공: {name}',
       importFailed: '가져오기 실패: {message}',
-      enableHint: '사용하려면 먼저 JSON 구성 파일을 가져오세요'
+      enableHint: '사용하려면 먼저 JSON 구성 파일을 가져오세요',
+      status: {
+        imported: '사용자 지정 음원 가져옴',
+        notImported: '가져오지 않음'
+      }
     }
   },
   application: {

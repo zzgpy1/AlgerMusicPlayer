@@ -10,7 +10,7 @@ export default {
     network: 'ネットワーク設定',
     system: 'システム管理',
     donation: '寄付サポート',
-    regard: 'について'
+    about: 'について'
   },
   basic: {
     themeMode: 'テーマモード',
@@ -111,7 +111,11 @@ export default {
       currentSource: '現在の音源',
       notImported: 'カスタム音源はまだインポートされていません。',
       importSuccess: '音源のインポートに成功しました: {name}',
-      importFailed: 'インポートに失敗しました: {message}'
+      importFailed: 'インポートに失敗しました: {message}',
+      status: {
+        imported: 'カスタム音源インポート済み',
+        notImported: '未インポート'
+      }
     }
   },
   application: {

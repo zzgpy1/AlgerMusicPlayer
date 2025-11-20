@@ -272,9 +272,6 @@ const parseWordByWordLine = (line: string): ParseResult<LyricLine> => {
     currentPos = wordEndPos;
   }
 
-  console.log('fullText', fullText);
-  console.log('words', words);
-
   return {
     success: true,
     data: {

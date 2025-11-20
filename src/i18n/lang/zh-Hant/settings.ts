@@ -10,7 +10,7 @@ export default {
     network: '網路設定',
     system: '系統管理',
     donation: '捐贈支持',
-    regard: '關於'
+    about: '關於'
   },
   basic: {
     themeMode: '主題模式',
@@ -108,7 +108,11 @@ export default {
       notImported: '尚未匯入自訂音源。',
       importSuccess: '成功匯入音源：{name}',
       importFailed: '匯入失敗：{message}',
-      enableHint: '請先匯入 JSON 設定檔才能啟用'
+      enableHint: '請先匯入 JSON 設定檔才能啟用',
+      status: {
+        imported: '已匯入自訂音源',
+        notImported: '未匯入'
+      }
     }
   },
   application: {

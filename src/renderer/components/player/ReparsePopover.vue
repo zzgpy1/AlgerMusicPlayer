@@ -76,7 +76,7 @@
 
 <script lang="ts" setup>
 import { useMessage } from 'naive-ui';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { CacheManager } from '@/api/musicParser';
@@ -96,7 +96,7 @@ const currentReparsingSource = ref<Platform | null>(null);
 // 实际存储选中音源的值
 const selectedSourcesValue = ref<Platform[]>([]);
 
-const isReparse = ref(localStorage.getItem(`song_source_${String(playMusic.value.id)}`) !== null);
+const isReparse = computed(() => selectedSourcesValue.value.length > 0);
 
 // 可选音源列表
 const musicSourceOptions = ref([
@@ -121,7 +121,8 @@ const getSourceIcon = (source: Platform) => {
     joox: 'ri-disc-fill',
     pyncmd: 'ri-netease-cloud-music-fill',
     bilibili: 'ri-bilibili-fill',
-    gdmusic: 'ri-google-fill'
+    gdmusic: 'ri-google-fill',
+    kuwo: 'ri-music-fill'
   };
 
   return iconMap[source] || 'ri-music-2-fill';
@@ -148,7 +149,6 @@ const initSelectedSources = () => {
 const clearCustomSource = () => {
   localStorage.removeItem(`song_source_${String(playMusic.value.id)}`);
   selectedSourcesValue.value = [];
-  isReparse.value = false;
 };
 
 // 直接重新解析当前歌曲
@@ -174,7 +174,7 @@ const directReparseMusic = async (source: Platform) => {
       JSON.stringify(selectedSourcesValue.value)
     );
 
-    const success = await playerStore.reparseCurrentSong(source);
+    const success = await playerStore.reparseCurrentSong(source, false);
 
     if (success) {
       message.success(t('player.reparse.success'));
@@ -221,7 +221,10 @@ watch(
               console.log('URL已过期，自动应用自定义音源重新加载');
               try {
                 isReparsing.value = true;
-                const success = await playerStore.reparseCurrentSong(sources[0]);
+                const songId = String(playMusic.value.id);
+                const sourceType = localStorage.getItem(`song_source_type_${songId}`);
+                const isAuto = sourceType === 'auto';
+                const success = await playerStore.reparseCurrentSong(sources[0], isAuto);
                 if (!success) {
                   message.error(t('player.reparse.failed'));
                 }

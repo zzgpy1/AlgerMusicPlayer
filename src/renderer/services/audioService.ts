@@ -5,6 +5,7 @@ import { isElectron } from '@/utils'; // 导入isElectron常量
 
 class AudioService {
   private currentSound: Howl | null = null;
+  private pendingSound: Howl | null = null;
 
   private currentTrack: SongResult | null = null;
 
@@ -470,16 +471,28 @@ class AudioService {
   }
 
   // 播放控制相关
-  play(
-    url?: string,
-    track?: SongResult,
+  public play(
+    url: string,
+    track: SongResult,
     isPlay: boolean = true,
-    seekTime: number = 0
+    seekTime: number = 0,
+    existingSound?: Howl
   ): Promise<Howl> {
     // 每次调用play方法时，尝试强制重置锁（注意：仅在页面刷新后的第一次播放时应用）
     if (!this.currentSound) {
       console.log('首次播放请求，强制重置操作锁');
       this.forceResetOperationLock();
+    }
+
+    // 如果有操作锁，且不是同一个 track 的操作，则等待
+    if (this.operationLock) {
+      console.log('audioService: 操作锁激活中，等待...');
+      return Promise.reject(new Error('操作锁激活中'));
+    }
+
+    if (!this.setOperationLock()) {
+      console.log('audioService: 获取操作锁失败');
+      return Promise.reject(new Error('操作锁激活中'));
     }
 
     // 如果操作锁已激活，但持续时间超过安全阈值，强制重置
@@ -531,9 +544,24 @@ class AudioService {
       return Promise.reject(new Error('缺少必要参数: url和track'));
     }
 
+    // 检查是否是同一首歌曲的无缝切换（Hot-Swap）
+    const isHotSwap =
+      this.currentTrack && track && this.currentTrack.id === track.id && this.currentSound;
+
+    if (isHotSwap) {
+      console.log('audioService: 检测到同一首歌曲的源切换，启用无缝切换模式');
+    }
+
     return new Promise<Howl>((resolve, reject) => {
       let retryCount = 0;
       const maxRetries = 1;
+
+      // 如果有正在加载的 pendingSound，先清理掉
+      if (this.pendingSound) {
+        console.log('audioService: 清理正在加载的 pendingSound');
+        this.pendingSound.unload();
+        this.pendingSound = null;
+      }
 
       const tryPlay = async () => {
         try {
@@ -560,8 +588,8 @@ class AudioService {
             await Howler.ctx.resume();
           }
 
-          // 先停止并清理现有的音频实例
-          if (this.currentSound) {
+          // 非热切换模式下，先停止并清理现有的音频实例
+          if (!isHotSwap && this.currentSound) {
             console.log('audioService: 停止并清理现有的音频实例');
             // 确保任何进行中的seek操作被取消
             if (this.seekLock && this.seekDebounceTimer) {
@@ -573,49 +601,122 @@ class AudioService {
             this.currentSound = null;
           }
 
-          // 清理 EQ 但保持上下文
-          console.log('audioService: 清理 EQ');
-          await this.disposeEQ(true);
+          // 清理 EQ 但保持上下文 (热切换时暂时不清理，等切换完成后再处理)
+          if (!isHotSwap) {
+            console.log('audioService: 清理 EQ');
+            await this.disposeEQ(true);
+          }
 
-          this.currentTrack = track;
-          console.log('audioService: 创建新的 Howl 对象');
-          this.currentSound = new Howl({
-            src: [url],
-            html5: true,
-            autoplay: false,
-            volume: 1, // 禁用 Howler.js 音量控制
-            rate: this.playbackRate,
-            format: ['mp3', 'aac'],
-            onloaderror: (_, error) => {
+          // 如果不是热切换，立即更新 currentTrack
+          if (!isHotSwap) {
+            this.currentTrack = track;
+          }
+
+          // 如果不是热切换，立即更新 currentTrack
+          if (!isHotSwap) {
+            this.currentTrack = track;
+          }
+
+          let newSound: Howl;
+
+          if (existingSound) {
+            console.log('audioService: 使用预加载的 Howl 对象');
+            newSound = existingSound;
+            // 确保 volume 和 rate 正确
+            newSound.volume(1); // 内部 volume 设为 1，由 Howler.masterGain 控制实际音量
+            newSound.rate(this.playbackRate);
+
+            // 重新绑定事件监听器，因为 PreloadService 可能没有绑定这些
+            // 注意：Howler 允许重复绑定，但最好先清理（如果无法清理，就直接绑定，Howler 是 EventEmitter）
+            // 这里我们假设 existingSound 是干净的或者我们只绑定我们需要关心的
+          } else {
+            console.log('audioService: 创建新的 Howl 对象');
+            newSound = new Howl({
+              src: [url],
+              html5: true,
+              autoplay: false,
+              volume: 1, // 禁用 Howler.js 音量控制
+              rate: this.playbackRate,
+              format: ['mp3', 'aac']
+            });
+          }
+
+          // 统一设置事件处理
+          const setupEvents = () => {
+            newSound.off('loaderror');
+            newSound.off('playerror');
+            newSound.off('load');
+
+            newSound.on('loaderror', (_, error) => {
               console.error('Audio load error:', error);
-              if (retryCount < maxRetries) {
+              if (retryCount < maxRetries && !existingSound) {
+                // 预加载的音频通常已经 loaded，不应重试
                 retryCount++;
                 console.log(`Retrying playback (${retryCount}/${maxRetries})...`);
                 setTimeout(tryPlay, 1000 * retryCount);
               } else {
-                // 发送URL过期事件，通知外部需要重新获取URL
-                this.emit('url_expired', this.currentTrack);
+                this.emit('url_expired', track);
                 this.releaseOperationLock();
+                if (isHotSwap) this.pendingSound = null;
                 reject(new Error('音频加载失败，请尝试切换其他歌曲'));
               }
-            },
-            onplayerror: (_, error) => {
+            });
+
+            newSound.on('playerror', (_, error) => {
               console.error('Audio play error:', error);
               if (retryCount < maxRetries) {
                 retryCount++;
                 console.log(`Retrying playback (${retryCount}/${maxRetries})...`);
                 setTimeout(tryPlay, 1000 * retryCount);
               } else {
-                // 发送URL过期事件，通知外部需要重新获取URL
-                this.emit('url_expired', this.currentTrack);
+                this.emit('url_expired', track);
                 this.releaseOperationLock();
+                if (isHotSwap) this.pendingSound = null;
                 reject(new Error('音频播放失败，请尝试切换其他歌曲'));
               }
-            },
-            onload: async () => {
+            });
+
+            const onLoaded = async () => {
               try {
-                // 初始化音频管道
-                await this.setupEQ(this.currentSound!);
+                // 如果是热切换，现在执行切换逻辑
+                if (isHotSwap) {
+                  console.log('audioService: 执行无缝切换');
+
+                  // 1. 获取当前播放进度
+                  let currentPos = 0;
+                  if (this.currentSound) {
+                    currentPos = this.currentSound.seek() as number;
+                  }
+
+                  // 2. 同步新音频进度
+                  newSound.seek(currentPos);
+
+                  // 3. 初始化新音频的 EQ
+                  await this.disposeEQ(true);
+                  await this.setupEQ(newSound);
+
+                  // 4. 播放新音频
+                  if (isPlay) {
+                    newSound.play();
+                  }
+
+                  // 5. 停止旧音频
+                  if (this.currentSound) {
+                    this.currentSound.stop();
+                    this.currentSound.unload();
+                  }
+
+                  // 6. 更新引用
+                  this.currentSound = newSound;
+                  this.currentTrack = track;
+                  this.pendingSound = null;
+
+                  console.log(`audioService: 无缝切换完成，进度同步至 ${currentPos}s`);
+                } else {
+                  // 普通加载逻辑
+                  await this.setupEQ(newSound);
+                  this.currentSound = newSound;
+                }
 
                 // 重新应用已保存的音量
                 const savedVolume = localStorage.getItem('volume');
@@ -623,22 +724,23 @@ class AudioService {
                   this.applyVolume(parseFloat(savedVolume));
                 }
 
-                // 音频加载成功后设置 EQ 和更新媒体会话
                 if (this.currentSound) {
                   try {
-                    if (seekTime > 0) {
+                    if (!isHotSwap && seekTime > 0) {
                       this.currentSound.seek(seekTime);
                     }
+
                     console.log('audioService: 音频加载成功，设置 EQ');
                     this.updateMediaSessionMetadata(track);
                     this.updateMediaSessionPositionState();
                     this.emit('load');
 
-                    // 此时音频已完全初始化，根据 isPlay 参数决定是否播放
-                    console.log('audioService: 音频完全初始化，isPlay =', isPlay);
-                    if (isPlay) {
-                      console.log('audioService: 开始播放');
-                      this.currentSound.play();
+                    if (!isHotSwap) {
+                      console.log('audioService: 音频完全初始化，isPlay =', isPlay);
+                      if (isPlay) {
+                        console.log('audioService: 开始播放');
+                        this.currentSound.play();
+                      }
                     }
 
                     resolve(this.currentSound);
@@ -651,28 +753,58 @@ class AudioService {
                 console.error('Audio initialization failed:', error);
                 reject(error);
               }
+            };
+
+            if (newSound.state() === 'loaded') {
+              onLoaded();
+            } else {
+              newSound.once('load', onLoaded);
             }
-          });
+          };
 
-          // 设置音频事件监听
-          if (this.currentSound) {
-            this.currentSound.on('play', () => {
-              this.updateMediaSessionState(true);
-              this.emit('play');
+          setupEvents();
+
+          if (isHotSwap) {
+            this.pendingSound = newSound;
+          } else {
+            this.currentSound = newSound;
+          }
+
+          // 设置音频事件监听 (play, pause, end, seek)
+          // ... (保持原有的事件监听逻辑不变，但需要确保绑定到 newSound)
+          const soundInstance = newSound;
+          if (soundInstance) {
+            // 清除旧的监听器以防重复
+            soundInstance.off('play');
+            soundInstance.off('pause');
+            soundInstance.off('end');
+            soundInstance.off('seek');
+
+            soundInstance.on('play', () => {
+              if (this.currentSound === soundInstance) {
+                this.updateMediaSessionState(true);
+                this.emit('play');
+              }
             });
 
-            this.currentSound.on('pause', () => {
-              this.updateMediaSessionState(false);
-              this.emit('pause');
+            soundInstance.on('pause', () => {
+              if (this.currentSound === soundInstance) {
+                this.updateMediaSessionState(false);
+                this.emit('pause');
+              }
             });
 
-            this.currentSound.on('end', () => {
-              this.emit('end');
+            soundInstance.on('end', () => {
+              if (this.currentSound === soundInstance) {
+                this.emit('end');
+              }
             });
 
-            this.currentSound.on('seek', () => {
-              this.updateMediaSessionPositionState();
-              this.emit('seek');
+            soundInstance.on('seek', () => {
+              if (this.currentSound === soundInstance) {
+                this.updateMediaSessionPositionState();
+                this.emit('seek');
+              }
             });
           }
         } catch (error) {

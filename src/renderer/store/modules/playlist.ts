@@ -4,7 +4,8 @@ import { defineStore, storeToRefs } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 
 import i18n from '@/../i18n/renderer';
-import { preloadNextSong, useSongDetail } from '@/hooks/usePlayerHooks';
+import { useSongDetail } from '@/hooks/usePlayerHooks';
+import { preloadService } from '@/services/preloadService';
 import type { SongResult } from '@/types/music';
 import { getImgUrl } from '@/utils';
 import { performShuffle, preloadCoverImage } from '@/utils/playerUtils';
@@ -81,7 +82,7 @@ export const usePlaylistStore = defineStore(
         // 预加载下一首歌曲的音频和封面
         if (nextSong) {
           if (nextSong.playMusicUrl) {
-            preloadNextSong(nextSong.playMusicUrl);
+            preloadService.load(nextSong);
           }
           if (nextSong.picUrl) {
             preloadCoverImage(nextSong.picUrl, getImgUrl);
@@ -343,7 +344,7 @@ export const usePlaylistStore = defineStore(
     /**
      * 下一首
      */
-    const _nextPlay = async () => {
+    const _nextPlay = async (retryCount: number = 0, maxRetries: number = 3) => {
       try {
         if (playList.value.length === 0) {
           return;
@@ -366,17 +367,44 @@ export const usePlaylistStore = defineStore(
         const nowPlayListIndex = (playListIndex.value + 1) % playList.value.length;
         const nextSong = { ...playList.value[nowPlayListIndex] };
 
-        playListIndex.value = nowPlayListIndex;
+        console.log(
+          `[nextPlay] 尝试播放下一首: ${nextSong.name}, 索引: ${currentIndex} -> ${nowPlayListIndex}, 重试次数: ${retryCount}/${maxRetries}`
+        );
 
+        // 先尝试播放歌曲，成功后再更新索引
         const success = await playerCore.handlePlayMusic(nextSong, true);
 
         if (success) {
+          // 播放成功，更新索引并重置重试计数
+          playListIndex.value = nowPlayListIndex;
+          console.log(`[nextPlay] 播放成功，索引已更新为: ${nowPlayListIndex}`);
           sleepTimerStore.handleSongChange();
         } else {
-          console.error('播放下一首失败');
-          playListIndex.value = currentIndex;
-          playerCore.setIsPlay(false);
-          message.error(i18n.global.t('player.playFailed'));
+          console.error(`[nextPlay] 播放下一首失败，当前索引: ${currentIndex}`);
+
+          // 如果还有重试次数，先更新索引再重试下一首
+          if (retryCount < maxRetries && playList.value.length > 1) {
+            console.log(
+              `[nextPlay] 跳过失败的歌曲，尝试播放下下首，重试 ${retryCount + 1}/${maxRetries}`
+            );
+
+            // 更新索引到失败的歌曲位置，这样下次递归调用会继续往下
+            playListIndex.value = nowPlayListIndex;
+
+            // 延迟后递归调用，尝试播放下一首
+            setTimeout(() => {
+              _nextPlay(retryCount + 1, maxRetries);
+            }, 500);
+          } else {
+            // 重试次数用尽或只有一首歌
+            if (retryCount >= maxRetries) {
+              console.error(`[nextPlay] 连续${maxRetries}首歌曲播放失败，停止尝试`);
+              message.error('连续多首歌曲播放失败，请检查网络或音源设置');
+            } else {
+              message.error(i18n.global.t('player.playFailed'));
+            }
+            playerCore.setIsPlay(false);
+          }
         }
       } catch (error) {
         console.error('切换下一首出错:', error);
@@ -400,12 +428,16 @@ export const usePlaylistStore = defineStore(
           (playListIndex.value - 1 + playList.value.length) % playList.value.length;
 
         const prevSong = { ...playList.value[nowPlayListIndex] };
-        playListIndex.value = nowPlayListIndex;
+
+        console.log(
+          `[prevPlay] 尝试播放上一首: ${prevSong.name}, 索引: ${currentIndex} -> ${nowPlayListIndex}`
+        );
 
         let success = false;
         let retryCount = 0;
         const maxRetries = 2;
 
+        // 先尝试播放歌曲，成功后再更新索引
         while (!success && retryCount < maxRetries) {
           success = await playerCore.handlePlayMusic(prevSong);
 
@@ -442,9 +474,12 @@ export const usePlaylistStore = defineStore(
           }
         }
 
-        if (!success) {
-          console.error('所有尝试都失败，无法播放上一首歌曲');
-          playListIndex.value = currentIndex;
+        if (success) {
+          // 播放成功，更新索引
+          playListIndex.value = nowPlayListIndex;
+          console.log(`[prevPlay] 播放成功，索引已更新为: ${nowPlayListIndex}`);
+        } else {
+          console.error(`[prevPlay] 播放上一首失败，保持当前索引: ${currentIndex}`);
           playerCore.setIsPlay(false);
           message.error(i18n.global.t('player.playFailed'));
         }
@@ -494,7 +529,7 @@ export const usePlaylistStore = defineStore(
             const sound = audioService.getCurrentSound();
             if (sound) {
               sound.play();
-              playerCore.checkPlaybackState(playerCore.playMusic);
+              // checkPlaybackState 已在 playAudio 中自动调用，无需在这里重复调用
             }
           }
           return;
@@ -579,7 +614,17 @@ export const usePlaylistStore = defineStore(
       setPlayListDrawerVisible,
       setPlay,
       initializePlaylist,
-      fetchSongs
+      fetchSongs,
+      updateSong: (song: SongResult) => {
+        const index = playList.value.findIndex(
+          (item) => item.id === song.id && item.source === song.source
+        );
+        if (index !== -1) {
+          playList.value[index] = song;
+          // 触发响应式更新
+          playList.value = [...playList.value];
+        }
+      }
     };
   },
   {

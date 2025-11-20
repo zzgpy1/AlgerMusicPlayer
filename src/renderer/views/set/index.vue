@@ -520,7 +520,7 @@
 
         <!-- 关于 -->
         <div id="about" ref="aboutRef" class="settings-section">
-          <div class="settings-section-title">{{ t('settings.regard') }}</div>
+          <div class="settings-section-title">{{ t('settings.sections.about') }}</div>
           <div class="settings-section-content">
             <div class="set-item">
               <div>
@@ -644,35 +644,31 @@ import { checkUpdate, UpdateResult } from '@/utils/update';
 import config from '../../../../package.json';
 
 // 所有平台默认值
-const ALL_PLATFORMS: Platform[] = ['migu', 'kugou', 'pyncmd', 'bilibili'];
+const ALL_PLATFORMS: Platform[] = ['migu', 'kugou', 'kuwo', 'pyncmd', 'bilibili'];
 
 const platform = window.electron ? window.electron.ipcRenderer.sendSync('get-platform') : 'web';
 
 const settingsStore = useSettingsStore();
 const userStore = useUserStore();
 
-// 创建一个本地缓存的setData，避免频繁更新
-const localSetData = ref({ ...settingsStore.setData });
-
-// 在组件卸载时保存设置
-onUnmounted(() => {
-  settingsStore.setSetData(localSetData.value);
-});
-
-const checking = ref(false);
-const updateInfo = ref<UpdateResult>({
-  hasUpdate: false,
-  latestVersion: '',
-  currentVersion: config.version,
-  releaseInfo: null
-});
-
-const { t } = useI18n();
-
+/**
+ * 防抖保存设置
+ * 避免频繁写入导致性能问题
+ */
 const saveSettings = useDebounceFn((data) => {
   settingsStore.setSetData(data);
 }, 500);
 
+/**
+ * 本地缓存的设置数据
+ * 使用本地副本避免直接操作 store,提升性能
+ */
+const localSetData = ref({ ...settingsStore.setData });
+
+/**
+ * 设置数据的计算属性
+ * 提供响应式的读写接口
+ */
 const setData = computed({
   get: () => localSetData.value,
   set: (newData) => {
@@ -680,7 +676,10 @@ const setData = computed({
   }
 });
 
-// 监听localSetData变化，保存设置
+/**
+ * 监听本地设置变化,自动保存
+ * 使用防抖避免频繁保存
+ */
 watch(
   () => localSetData.value,
   (newValue) => {
@@ -689,11 +688,14 @@ watch(
   { deep: true }
 );
 
-// 监听store中setData的变化，同步到本地
+/**
+ * 监听 store 中设置的变化,同步到本地
+ * 避免外部修改导致的数据不一致
+ */
 watch(
   () => settingsStore.setData,
   (newValue) => {
-    // 只在初始加载时更新本地数据，避免循环更新
+    // 只在数据不同时更新,避免循环触发
     if (JSON.stringify(localSetData.value) !== JSON.stringify(newValue)) {
       localSetData.value = { ...newValue };
     }
@@ -701,6 +703,26 @@ watch(
   { deep: true, immediate: true }
 );
 
+/**
+ * 组件卸载时确保设置已保存
+ */
+onUnmounted(() => {
+  settingsStore.setSetData(localSetData.value);
+});
+
+// ==================== 更新检查相关 ====================
+const checking = ref(false);
+const updateInfo = ref<UpdateResult>({
+  hasUpdate: false,
+  latestVersion: '',
+  currentVersion: config.version,
+  releaseInfo: null
+});
+
+// ==================== i18n ====================
+const { t } = useI18n();
+
+// ==================== 主题和界面设置 ====================
 const isDarkTheme = computed({
   get: () => settingsStore.theme === 'dark',
   set: () => settingsStore.toggleTheme()
@@ -1008,16 +1030,30 @@ const handleShortcutsChange = (shortcuts: any) => {
   console.log('快捷键已更新:', shortcuts);
 };
 
-// 定义设置分类
-const settingSections = [
-  { id: 'basic', title: t('settings.sections.basic') },
-  { id: 'playback', title: t('settings.sections.playback') },
-  { id: 'application', title: t('settings.sections.application'), electron: true },
-  { id: 'network', title: t('settings.sections.network'), electron: true },
-  { id: 'system', title: t('settings.sections.system'), electron: true },
-  { id: 'regard', title: t('settings.sections.regard') },
-  { id: 'donation', title: t('settings.sections.donation') }
-];
+/**
+ * 设置分类配置
+ * 定义左侧导航的所有分类项
+ */
+interface SettingSection {
+  id: string;
+  title?: string; // 可选,在模板中动态获取 i18n 标题
+  electron?: boolean;
+}
+
+const settingSections = computed<SettingSection[]>(() => {
+  const sections: SettingSection[] = [
+    { id: 'basic' },
+    { id: 'playback' },
+    { id: 'application', electron: true },
+    { id: 'network', electron: true },
+    { id: 'system', electron: true },
+    { id: 'about' },
+    { id: 'donation' }
+  ];
+
+  // 过滤非 Electron 环境下的专属分类
+  return sections.filter((section) => !section.electron || isElectron);
+});
 
 // 当前激活的分类
 const currentSection = ref('basic');
@@ -1032,18 +1068,27 @@ const systemRef = ref();
 const aboutRef = ref();
 const donationRef = ref();
 
-// 滚动到指定分类
+/**
+ * Section refs 映射表
+ * 用于滚动定位和状态追踪
+ */
+const SECTION_REFS_MAP = computed(() => ({
+  basic: basicRef,
+  playback: playbackRef,
+  application: applicationRef,
+  network: networkRef,
+  system: systemRef,
+  about: aboutRef,
+  donation: donationRef
+}));
+
+/**
+ * 滚动到指定分类
+ * @param sectionId - 分类 ID
+ */
 const scrollToSection = async (sectionId: string) => {
   currentSection.value = sectionId;
-  const sectionRef = {
-    basic: basicRef,
-    playback: playbackRef,
-    application: applicationRef,
-    network: networkRef,
-    system: systemRef,
-    about: aboutRef,
-    donation: donationRef
-  }[sectionId];
+  const sectionRef = SECTION_REFS_MAP.value[sectionId];
 
   if (sectionRef?.value) {
     await nextTick();
@@ -1054,27 +1099,30 @@ const scrollToSection = async (sectionId: string) => {
   }
 };
 
-// 处理滚动，更新当前激活的分类
+/**
+ * 滚动偏移阈值(px)
+ * 用于判断当前激活的分类
+ */
+const SCROLL_OFFSET_THRESHOLD = 100;
+
+/**
+ * 处理滚动事件，更新当前激活的分类
+ * 根据滚动位置自动高亮左侧导航
+ */
 const handleScroll = (e: any) => {
   const { scrollTop } = e.target;
 
-  const sections = [
-    { id: 'basic', ref: basicRef },
-    { id: 'playback', ref: playbackRef },
-    { id: 'application', ref: applicationRef },
-    { id: 'network', ref: networkRef },
-    { id: 'system', ref: systemRef },
-    { id: 'about', ref: aboutRef },
-    { id: 'donation', ref: donationRef }
-  ];
+  const sections = Object.entries(SECTION_REFS_MAP.value).map(([id, ref]) => ({
+    id,
+    ref
+  }));
 
-  const activeSection = sections[0].id;
-  let lastValidSection = activeSection;
+  let lastValidSection = sections[0]?.id || 'basic';
 
   for (const section of sections) {
     if (section.ref?.value) {
       const { offsetTop } = section.ref.value;
-      if (scrollTop >= offsetTop - 100) {
+      if (scrollTop >= offsetTop - SCROLL_OFFSET_THRESHOLD) {
         lastValidSection = section.id;
       }
     }
