@@ -31,6 +31,7 @@ android/app/release
 
 .cursor
 .windsurf
+.agent
 
 
 .auto-imports.d.ts

@@ -5,6 +5,7 @@ import i18n from '@/../i18n/renderer';
 import { getBilibiliAudioUrl } from '@/api/bilibili';
 import { getMusicLrc, getMusicUrl, getParsingMusicUrl } from '@/api/music';
 import { playbackRequestManager } from '@/services/playbackRequestManager';
+import { SongSourceConfigManager } from '@/services/SongSourceConfigManager';
 import type { ILyric, ILyricText, IWordData, SongResult } from '@/types/music';
 import { getImgUrl } from '@/utils';
 import { getImageLinearBackground } from '@/utils/linearColor';
@@ -64,17 +65,8 @@ export const getSongUrl = async (
     const globalSources = settingsStore.setData.enabledMusicSources || [];
     const useCustomApiGlobally = globalSources.includes('custom');
 
-    const songId = String(id);
-    const savedSourceStr = localStorage.getItem(`song_source_${songId}`);
-    let useCustomApiForSong = false;
-    if (savedSourceStr) {
-      try {
-        const songSources = JSON.parse(savedSourceStr);
-        useCustomApiForSong = songSources.includes('custom');
-      } catch (e) {
-        console.error('解析歌曲音源设置失败:', e);
-      }
-    }
+    const songConfig = SongSourceConfigManager.getConfig(id);
+    const useCustomApiForSong = songConfig?.sources.includes('custom' as any) ?? false;
 
     // 如果全局或歌曲专属设置中启用了自定义API，则最优先尝试
     if ((useCustomApiGlobally || useCustomApiForSong) && settingsStore.setData.customApiPlugin) {
@@ -116,9 +108,9 @@ export const getSongUrl = async (
     }
 
     // 如果有自定义音源设置，直接使用getParsingMusicUrl获取URL
-    if (savedSourceStr && songData.source !== 'bilibili') {
+    if (songConfig && songData.source !== 'bilibili') {
       try {
-        console.log(`使用自定义音源解析歌曲 ID: ${songId}`);
+        console.log(`使用自定义音源解析歌曲 ID: ${id}`);
         const res = await getParsingMusicUrl(numericId, cloneDeep(songData));
         console.log('res', res);
 

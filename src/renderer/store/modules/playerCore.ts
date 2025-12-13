@@ -11,6 +11,7 @@ import { useLyrics, useSongDetail } from '@/hooks/usePlayerHooks';
 import { audioService } from '@/services/audioService';
 import { playbackRequestManager } from '@/services/playbackRequestManager';
 import { preloadService } from '@/services/preloadService';
+import { SongSourceConfigManager } from '@/services/SongSourceConfigManager';
 import type { Platform, SongResult } from '@/types/music';
 import { getImgUrl } from '@/utils';
 import { getImageLinearBackground } from '@/utils/linearColor';
@@ -30,8 +31,6 @@ export const usePlayerCoreStore = defineStore(
     const isPlay = ref(false);
     const playMusic = ref<SongResult>({} as SongResult);
     const playMusicUrl = ref('');
-    const triedSources = ref<Set<string>>(new Set());
-    const triedSourceDiffs = ref<Map<string, number>>(new Map());
     const musicFull = ref(false);
     const playbackRate = ref(1.0);
     const volume = ref(1);
@@ -165,10 +164,9 @@ export const usePlayerCoreStore = defineStore(
      * 核心播放处理函数
      */
     const handlePlayMusic = async (music: SongResult, isPlay: boolean = true) => {
-      // 如果是新歌曲，重置已尝试的音源
+      // 如果是新歌曲，重置已尝试的音源（使用 SongSourceConfigManager 按歌曲隔离）
       if (music.id !== playMusic.value.id) {
-        triedSources.value.clear();
-        triedSourceDiffs.value.clear();
+        SongSourceConfigManager.clearTriedSources(music.id);
       }
 
       // 创建新的播放请求并取消之前的所有请求
@@ -427,110 +425,7 @@ export const usePlayerCoreStore = defineStore(
           new CustomEvent('audio-ready', { detail: { sound: newSound, shouldPlay } })
         );
 
-        // 检查时长是否匹配，如果不匹配则尝试自动重新解析
-        const duration = newSound.duration();
-        const expectedDuration = (playMusic.value.dt || 0) / 1000;
-
-        // 如果时长差异超过5秒，且不是B站视频，且预期时长大于0
-        if (
-          expectedDuration > 0 &&
-          Math.abs(duration - expectedDuration) > 5 &&
-          playMusic.value.source !== 'bilibili' &&
-          playMusic.value.id
-        ) {
-          const songId = String(playMusic.value.id);
-          const sourceType = localStorage.getItem(`song_source_type_${songId}`);
-
-          // 如果不是用户手动锁定的音源
-          if (sourceType !== 'manual') {
-            console.warn(
-              `时长不匹配 (实际: ${duration}s, 预期: ${expectedDuration}s)，尝试自动切换音源`
-            );
-
-            // 记录当前失败的音源
-            // 注意：这里假设当前使用的音源是 playMusic.value.source，或者是刚刚解析出来的
-            // 但实际上我们需要知道当前具体是用哪个平台解析成功的，这可能需要从 getSongUrl 的结果中获取
-            // 暂时简单处理，将当前配置的来源加入已尝试列表
-
-            // 获取所有可用音源
-            const { useSettingsStore } = await import('./settings');
-            const settingsStore = useSettingsStore();
-            const enabledSources = settingsStore.setData.enabledMusicSources || [
-              'migu',
-              'kugou',
-              'pyncmd',
-              'gdmusic'
-            ];
-            const availableSources: Platform[] = enabledSources.filter(
-              (s: string) => s !== 'bilibili'
-            );
-
-            // 将当前正在使用的音源加入已尝试列表
-            let currentSource = 'unknown';
-            const currentSavedSource = localStorage.getItem(`song_source_${songId}`);
-            if (currentSavedSource) {
-              try {
-                const sources = JSON.parse(currentSavedSource);
-                if (Array.isArray(sources) && sources.length > 0) {
-                  currentSource = sources[0];
-                  triedSources.value.add(currentSource);
-                }
-              } catch {
-                console.error(`解析当前音源失败: ${currentSource}`);
-              }
-            }
-
-            // 找到下一个未尝试的音源
-            const nextSource = availableSources.find((s) => !triedSources.value.has(s));
-
-            // 记录当前音源的时间差
-            if (currentSource !== 'unknown') {
-              triedSourceDiffs.value.set(currentSource, Math.abs(duration - expectedDuration));
-            }
-
-            if (nextSource) {
-              console.log(`自动切换到音源: ${nextSource}`);
-              newSound.stop();
-              newSound.unload();
-
-              // 递归调用 reparseCurrentSong
-              // 注意：这里是异步调用，不会阻塞当前函数返回，但我们已经停止了播放
-              const success = await reparseCurrentSong(nextSource, true);
-              if (success) {
-                return audioService.getCurrentSound();
-              }
-              return null;
-            } else {
-              console.warn('所有音源都已尝试，寻找最接近时长的版本');
-
-              // 找出时间差最小的音源
-              let bestSource = '';
-              let minDiff = Infinity;
-
-              for (const [source, diff] of triedSourceDiffs.value.entries()) {
-                if (diff < minDiff) {
-                  minDiff = diff;
-                  bestSource = source;
-                }
-              }
-
-              // 如果找到了最佳音源，且不是当前正在播放的音源
-              if (bestSource && bestSource !== currentSource) {
-                console.log(`切换到最佳匹配音源: ${bestSource} (差异: ${minDiff}s)`);
-                newSound.stop();
-                newSound.unload();
-
-                const success = await reparseCurrentSong(bestSource as Platform, true);
-                if (success) {
-                  return audioService.getCurrentSound();
-                }
-                return null;
-              }
-
-              console.log(`当前音源 ${currentSource} 已经是最佳匹配 (差异: ${minDiff}s)，保留播放`);
-            }
-          }
-        }
+        // 时长检查已在 preloadService.ts 中完成
 
         return newSound;
       } catch (error) {
@@ -630,11 +525,12 @@ export const usePlayerCoreStore = defineStore(
           return false;
         }
 
-        const songId = String(currentSong.id);
-        localStorage.setItem(`song_source_${songId}`, JSON.stringify([sourcePlatform]));
-
-        // 记录音源设置类型（自动/手动）
-        localStorage.setItem(`song_source_type_${songId}`, isAuto ? 'auto' : 'manual');
+        // 使用 SongSourceConfigManager 保存配置
+        SongSourceConfigManager.setConfig(
+          currentSong.id,
+          [sourcePlatform],
+          isAuto ? 'auto' : 'manual'
+        );
 
         const currentSound = audioService.getCurrentSound();
         if (currentSound) {

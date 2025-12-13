@@ -81,7 +81,7 @@ import { useI18n } from 'vue-i18n';
 
 import { CacheManager } from '@/api/musicParser';
 import { playMusic } from '@/hooks/MusicHook';
-import { audioService } from '@/services/audioService';
+import { SongSourceConfigManager } from '@/services/SongSourceConfigManager';
 import { usePlayerStore } from '@/store/modules/player';
 import type { Platform } from '@/types/music';
 
@@ -130,16 +130,11 @@ const getSourceIcon = (source: Platform) => {
 
 // 初始化选中的音源
 const initSelectedSources = () => {
-  const songId = String(playMusic.value.id);
-  const savedSource = localStorage.getItem(`song_source_${songId}`);
+  const songId = playMusic.value.id;
+  const config = SongSourceConfigManager.getConfig(songId);
 
-  if (savedSource) {
-    try {
-      selectedSourcesValue.value = JSON.parse(savedSource);
-    } catch (e) {
-      console.error('解析保存的音源设置失败:', e);
-      selectedSourcesValue.value = [];
-    }
+  if (config) {
+    selectedSourcesValue.value = config.sources;
   } else {
     selectedSourcesValue.value = [];
   }
@@ -147,7 +142,7 @@ const initSelectedSources = () => {
 
 // 清除自定义音源
 const clearCustomSource = () => {
-  localStorage.removeItem(`song_source_${String(playMusic.value.id)}`);
+  SongSourceConfigManager.clearConfig(playMusic.value.id);
   selectedSourcesValue.value = [];
 };
 
@@ -168,11 +163,8 @@ const directReparseMusic = async (source: Platform) => {
     // 更新选中的音源值为当前点击的音源
     selectedSourcesValue.value = [source];
 
-    // 保存到localStorage
-    localStorage.setItem(
-      `song_source_${String(songId)}`,
-      JSON.stringify(selectedSourcesValue.value)
-    );
+    // 使用 SongSourceConfigManager 保存配置（手动选择）
+    SongSourceConfigManager.setConfig(songId, [source], 'manual');
 
     const success = await playerStore.reparseCurrentSong(source, false);
 
@@ -199,49 +191,6 @@ watch(
     }
   },
   { immediate: true }
-);
-
-// 监听歌曲变化，检查是否有自定义音源
-watch(
-  () => playMusic.value.id,
-  async (newId) => {
-    if (newId) {
-      const songId = String(newId);
-      const savedSource = localStorage.getItem(`song_source_${songId}`);
-
-      // 如果有保存的音源设置但当前不是使用自定义解析的播放，尝试应用
-      if (savedSource && playMusic.value.source !== 'bilibili') {
-        try {
-          const sources = JSON.parse(savedSource) as Platform[];
-          console.log(`检测到歌曲ID ${songId} 有自定义音源设置:`, sources);
-
-          // 当URL加载失败或过期时，自动应用自定义音源重新加载
-          audioService.on('url_expired', async (trackInfo) => {
-            if (trackInfo && trackInfo.id === playMusic.value.id) {
-              console.log('URL已过期，自动应用自定义音源重新加载');
-              try {
-                isReparsing.value = true;
-                const songId = String(playMusic.value.id);
-                const sourceType = localStorage.getItem(`song_source_type_${songId}`);
-                const isAuto = sourceType === 'auto';
-                const success = await playerStore.reparseCurrentSong(sources[0], isAuto);
-                if (!success) {
-                  message.error(t('player.reparse.failed'));
-                }
-              } catch (e) {
-                console.error('自动重新解析失败:', e);
-                message.error(t('player.reparse.failed'));
-              } finally {
-                isReparsing.value = false;
-              }
-            }
-          });
-        } catch (e) {
-          console.error('解析保存的音源设置失败:', e);
-        }
-      }
-    }
-  }
 );
 </script>
 
