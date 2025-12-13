@@ -7,10 +7,18 @@ export type Platform =
   | 'pyncmd'
   | 'joox'
   | 'bilibili'
-  | 'gdmusic';
+  | 'gdmusic'
+  | 'lxMusic';
 
 // 默认平台列表
-export const DEFAULT_PLATFORMS: Platform[] = ['migu', 'kugou', 'kuwo', 'pyncmd', 'bilibili'];
+export const DEFAULT_PLATFORMS: Platform[] = [
+  'lxMusic',
+  'migu',
+  'kugou',
+  'kuwo',
+  'pyncmd',
+  'bilibili'
+];
 
 export interface IRecommendMusic {
   code: number;

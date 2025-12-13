@@ -122,7 +122,8 @@ const getSourceIcon = (source: Platform) => {
     pyncmd: 'ri-netease-cloud-music-fill',
     bilibili: 'ri-bilibili-fill',
     gdmusic: 'ri-google-fill',
-    kuwo: 'ri-music-fill'
+    kuwo: 'ri-music-fill',
+    lxMusic: 'ri-leaf-fill'
   };
 
   return iconMap[source] || 'ri-music-2-fill';

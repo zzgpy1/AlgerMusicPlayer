@@ -10,6 +10,7 @@ import requestMusic from '@/utils/request_music';
 import { searchAndGetBilibiliAudioUrl } from './bilibili';
 import type { ParsedMusicResult } from './gdmusic';
 import { parseFromGDMusic } from './gdmusic';
+import { LxMusicStrategy } from './lxMusicStrategy';
 import { parseFromCustomApi } from './parseFromCustomApi';
 
 const { saveData, getData, deleteData } = musicDB;
@@ -499,6 +500,7 @@ class UnblockMusicStrategy implements MusicSourceStrategy {
  */
 class MusicSourceStrategyFactory {
   private static strategies: MusicSourceStrategy[] = [
+    new LxMusicStrategy(),
     new CustomApiStrategy(),
     new BilibiliStrategy(),
     new GDMusicStrategy(),

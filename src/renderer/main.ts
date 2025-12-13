@@ -20,7 +20,7 @@ Object.keys(directives).forEach((key: string) => {
 
 app.use(pinia);
 app.use(router);
-app.use(i18n);
+app.use(i18n as any);
 app.mount('#app');
 
 // 初始化应用内快捷键

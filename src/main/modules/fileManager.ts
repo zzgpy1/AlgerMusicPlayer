@@ -310,6 +310,47 @@ export function initializeFileManager() {
       throw new Error(`文件读取或解析失败: ${error.message}`);
     }
   });
+
+  // 处理导入落雪音源脚本的请求
+  ipcMain.handle('import-lx-music-script', async () => {
+    const result = await dialog.showOpenDialog({
+      title: '选择落雪音源脚本文件',
+      filters: [{ name: 'JavaScript Files', extensions: ['js'] }],
+      properties: ['openFile']
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    const filePath = result.filePaths[0];
+    try {
+      const fileContent = fs.readFileSync(filePath, 'utf-8');
+
+      // 验证脚本格式：检查是否包含落雪音源特征
+      if (
+        !fileContent.includes('globalThis.lx') &&
+        !fileContent.includes('lx.on') &&
+        !fileContent.includes('EVENT_NAMES')
+      ) {
+        throw new Error('无效的落雪音源脚本，未找到 globalThis.lx 相关代码。');
+      }
+
+      // 检查是否包含必要的元信息注释
+      const hasMetaComment = fileContent.includes('@name');
+      if (!hasMetaComment) {
+        console.warn('警告: 脚本缺少 @name 元信息注释');
+      }
+
+      return {
+        name: path.basename(filePath, '.js'),
+        content: fileContent
+      };
+    } catch (error: any) {
+      console.error('读取落雪音源脚本失败:', error);
+      throw new Error(`脚本读取失败: ${error.message}`);
+    }
+  });
 }
 
 /**

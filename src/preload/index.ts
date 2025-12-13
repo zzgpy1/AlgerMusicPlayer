@@ -19,6 +19,7 @@ const api = {
   unblockMusic: (id, data, enabledSources) =>
     ipcRenderer.invoke('unblock-music', id, data, enabledSources),
   importCustomApiPlugin: () => ipcRenderer.invoke('import-custom-api-plugin'),
+  importLxMusicScript: () => ipcRenderer.invoke('import-lx-music-script'),
   // 歌词窗口关闭事件
   onLyricWindowClosed: (callback: () => void) => {
     ipcRenderer.on('lyric-window-closed', () => callback());

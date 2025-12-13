@@ -24,7 +24,7 @@
   "alwaysShowDownloadButton": false,
   "unlimitedDownload": false,
   "enableMusicUnblock": true,
-  "enabledMusicSources": ["migu", "kugou", "pyncmd", "bilibili"],
+  "enabledMusicSources": ["migu", "kugou", "pyncmd"],
   "showTopAction": false,
   "contentZoomFactor": 1,
   "autoTheme": false,
@@ -32,5 +32,7 @@
   "isMenuExpanded": false,
   "customApiPlugin": "",
   "customApiPluginName": "",
+  "lxMusicScripts": [],
+  "activeLxMusicApiId": null,
   "enableGpuAcceleration": true
 }

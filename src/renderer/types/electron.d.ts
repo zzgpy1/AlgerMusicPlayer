@@ -8,6 +8,8 @@ export interface IElectronAPI {
   openLyric: () => void;
   sendLyric: (_data: string) => void;
   unblockMusic: (_id: number) => Promise<string>;
+  importCustomApiPlugin: () => Promise<{ name: string; content: string } | null>;
+  importLxMusicScript: () => Promise<{ name: string; content: string } | null>;
   onLanguageChanged: (_callback: (_locale: string) => void) => void;
   store: {
     get: (_key: string) => Promise<any>;

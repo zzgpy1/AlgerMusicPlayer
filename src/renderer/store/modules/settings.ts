@@ -1,4 +1,4 @@
-import { cloneDeep, merge } from 'lodash';
+import { cloneDeep, isArray, mergeWith } from 'lodash';
 import { defineStore } from 'pinia';
 import { ref, watch } from 'vue';
 
@@ -55,8 +55,16 @@ export const useSettingsStore = defineStore('settings', () => {
       ? window.electron.ipcRenderer.sendSync('get-store-value', 'set')
       : JSON.parse(localStorage.getItem('appSettings') || '{}');
 
+    // 自定义合并策略：如果是数组，直接使用源数组（覆盖默认值）
+    const customizer = (_objValue: any, srcValue: any) => {
+      if (isArray(srcValue)) {
+        return srcValue;
+      }
+      return undefined;
+    };
+
     // 合并默认设置和保存的设置
-    const mergedSettings = merge({}, setDataDefault, savedSettings);
+    const mergedSettings = mergeWith({}, setDataDefault, savedSettings, customizer);
 
     // 更新设置并返回
     setSetData(mergedSettings);

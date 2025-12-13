@@ -22,6 +22,7 @@ interface API {
   onLanguageChanged: (callback: (locale: string) => void) => void;
   removeDownloadListeners: () => void;
   importCustomApiPlugin: () => Promise<{ name: string; content: string } | null>;
+  importLxMusicScript: () => Promise<{ name: string; content: string } | null>;
   invoke: (channel: string, ...args: any[]) => Promise<any>;
   getSearchSuggestions: (keyword: string) => Promise<any>;
 }
