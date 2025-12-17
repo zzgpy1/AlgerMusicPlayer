@@ -314,20 +314,6 @@ export const usePlayerCoreStore = defineStore(
         }
         playbackRequestManager.failRequest(requestId);
 
-        // 通知外部播放失败，需要跳到下一首
-        try {
-          const { usePlaylistStore } = await import('./playlist');
-          const playlistStore = usePlaylistStore();
-          if (Array.isArray(playlistStore.playList) && playlistStore.playList.length > 1) {
-            message.warning('歌曲解析失败 播放下一首');
-            setTimeout(() => {
-              playlistStore.nextPlay();
-            }, 500);
-          }
-        } catch (e) {
-          console.warn('切换下一首时发生问题:', e);
-        }
-
         return false;
       }
     };
@@ -458,19 +444,7 @@ export const usePlayerCoreStore = defineStore(
             }
           }, 1000);
         } else {
-          // 非操作锁错误：尝试切到下一首，避免在解析失败时卡住
-          message.warning('歌曲解析失败 播放下一首');
-          try {
-            const { usePlaylistStore } = await import('./playlist');
-            const playlistStore = usePlaylistStore();
-            if (Array.isArray(playlistStore.playList) && playlistStore.playList.length > 1) {
-              setTimeout(() => {
-                playlistStore.nextPlay();
-              }, 500);
-            }
-          } catch (e) {
-            console.warn('播放失败回退到下一首时发生问题（可能依赖未加载）:', e);
-          }
+          console.warn('播放音频失败（非操作锁错误），由调用方处理重试');
         }
 
         message.error(i18n.global.t('player.playFailed'));

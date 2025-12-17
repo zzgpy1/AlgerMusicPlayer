@@ -31,6 +31,11 @@ export const usePlaylistStore = defineStore(
     const originalPlayList = shallowRef<SongResult[]>([]);
     const playListDrawerVisible = ref(false);
 
+    // 连续失败计数器（用于防止无限循环）
+    const consecutiveFailCount = ref(0);
+    const MAX_CONSECUTIVE_FAILS = 5; // 最大连续失败次数
+    const SINGLE_TRACK_MAX_RETRIES = 3; // 单曲最大重试次数
+
     // ==================== Computed ====================
     const currentPlayList = computed(() => playList.value);
     const currentPlayListIndex = computed(() => playListIndex.value);
@@ -343,8 +348,9 @@ export const usePlaylistStore = defineStore(
 
     /**
      * 下一首
+     * @param singleTrackRetryCount 单曲重试次数（同一首歌的重试）
      */
-    const _nextPlay = async (retryCount: number = 0, maxRetries: number = 3) => {
+    const _nextPlay = async (singleTrackRetryCount: number = 0) => {
       try {
         if (playList.value.length === 0) {
           return;
@@ -352,6 +358,15 @@ export const usePlaylistStore = defineStore(
 
         const playerCore = usePlayerCoreStore();
         const sleepTimerStore = useSleepTimerStore();
+
+        // 检查是否超过最大连续失败次数
+        if (consecutiveFailCount.value >= MAX_CONSECUTIVE_FAILS) {
+          console.error(`[nextPlay] 连续${MAX_CONSECUTIVE_FAILS}首歌曲播放失败，停止播放`);
+          message.warning(i18n.global.t('player.consecutiveFailsError'));
+          consecutiveFailCount.value = 0; // 重置计数器
+          playerCore.setIsPlay(false);
+          return;
+        }
 
         // 检查是否是播放列表的最后一首且设置了播放列表结束定时
         if (
@@ -368,42 +383,51 @@ export const usePlaylistStore = defineStore(
         const nextSong = { ...playList.value[nowPlayListIndex] };
 
         console.log(
-          `[nextPlay] 尝试播放下一首: ${nextSong.name}, 索引: ${currentIndex} -> ${nowPlayListIndex}, 重试次数: ${retryCount}/${maxRetries}`
+          `[nextPlay] 尝试播放: ${nextSong.name}, 索引: ${currentIndex} -> ${nowPlayListIndex}, 单曲重试: ${singleTrackRetryCount}/${SINGLE_TRACK_MAX_RETRIES}, 连续失败: ${consecutiveFailCount.value}/${MAX_CONSECUTIVE_FAILS}`
         );
 
-        // 先尝试播放歌曲，成功后再更新索引
+        // 先尝试播放歌曲
         const success = await playerCore.handlePlayMusic(nextSong, true);
 
         if (success) {
-          // 播放成功，更新索引并重置重试计数
+          // 播放成功，重置所有计数器并更新索引
+          consecutiveFailCount.value = 0;
           playListIndex.value = nowPlayListIndex;
           console.log(`[nextPlay] 播放成功，索引已更新为: ${nowPlayListIndex}`);
           sleepTimerStore.handleSongChange();
         } else {
-          console.error(`[nextPlay] 播放下一首失败，当前索引: ${currentIndex}`);
+          console.error(`[nextPlay] 播放失败: ${nextSong.name}`);
 
-          // 如果还有重试次数，先更新索引再重试下一首
-          if (retryCount < maxRetries && playList.value.length > 1) {
+          // 单曲重试逻辑
+          if (singleTrackRetryCount < SINGLE_TRACK_MAX_RETRIES) {
             console.log(
-              `[nextPlay] 跳过失败的歌曲，尝试播放下下首，重试 ${retryCount + 1}/${maxRetries}`
+              `[nextPlay] 单曲重试 ${singleTrackRetryCount + 1}/${SINGLE_TRACK_MAX_RETRIES}`
+            );
+            // 不更新索引，重试同一首歌
+            setTimeout(() => {
+              _nextPlay(singleTrackRetryCount + 1);
+            }, 1000);
+          } else {
+            // 单曲重试次数用尽，递增连续失败计数，尝试下一首
+            consecutiveFailCount.value++;
+            console.log(
+              `[nextPlay] 单曲重试用尽，连续失败计数: ${consecutiveFailCount.value}/${MAX_CONSECUTIVE_FAILS}`
             );
 
-            // 更新索引到失败的歌曲位置，这样下次递归调用会继续往下
-            playListIndex.value = nowPlayListIndex;
+            if (playList.value.length > 1) {
+              // 更新索引到失败的歌曲位置，这样下次递归调用会继续往下
+              playListIndex.value = nowPlayListIndex;
+              message.warning(i18n.global.t('player.parseFailedPlayNext'));
 
-            // 延迟后递归调用，尝试播放下一首
-            setTimeout(() => {
-              _nextPlay(retryCount + 1, maxRetries);
-            }, 500);
-          } else {
-            // 重试次数用尽或只有一首歌
-            if (retryCount >= maxRetries) {
-              console.error(`[nextPlay] 连续${maxRetries}首歌曲播放失败，停止尝试`);
-              message.error('连续多首歌曲播放失败，请检查网络或音源设置');
+              // 延迟后尝试下一首（重置单曲重试计数）
+              setTimeout(() => {
+                _nextPlay(0);
+              }, 500);
             } else {
+              // 只有一首歌且失败
               message.error(i18n.global.t('player.playFailed'));
+              playerCore.setIsPlay(false);
             }
-            playerCore.setIsPlay(false);
           }
         }
       } catch (error) {

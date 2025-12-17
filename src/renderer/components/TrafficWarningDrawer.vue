@@ -1,12 +1,4 @@
 <template>
-  <div class="traffic-warning-trigger">
-    <n-button circle secondary class="mac-style-button" @click="showDrawer = true">
-      <template #icon>
-        <i class="iconfont ri-information-line"></i>
-      </template>
-    </n-button>
-  </div>
-
   <n-drawer
     v-model:show="showDrawer"
     :width="isMobile ? '100%' : '800px'"

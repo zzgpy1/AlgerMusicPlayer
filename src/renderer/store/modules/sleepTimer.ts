@@ -88,14 +88,14 @@ export const useSleepTimerStore = defineStore('sleepTimer', () => {
   /**
    * 按歌曲数设置定时关闭
    */
-  const setSleepTimerBySongs = (songs: number) => {
+  const setSleepTimerBySongs = async (songs: number) => {
     clearSleepTimer();
 
     if (songs <= 0) {
       return false;
     }
 
-    const { usePlaylistStore } = require('./playlist');
+    const { usePlaylistStore } = await import('./playlist');
     const playlistStore = usePlaylistStore();
 
     sleepTimer.value = {

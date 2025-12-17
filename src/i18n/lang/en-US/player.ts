@@ -14,6 +14,9 @@ export default {
   addCorrection: 'Add {num} seconds',
   subtractCorrection: 'Subtract {num} seconds',
   playFailed: 'Play Failed, Play Next Song',
+  parseFailedPlayNext: 'Song parsing failed, playing next',
+  consecutiveFailsError:
+    'Playback error, possibly due to network issues or invalid source. Please switch playlist or try again later',
   playMode: {
     sequence: 'Sequence',
     loop: 'Loop',
