@@ -337,8 +337,15 @@ export const usePlayerCoreStore = defineStore(
         // 检查保存的进度
         let initialPosition = 0;
         const savedProgress = JSON.parse(localStorage.getItem('playProgress') || '{}');
+        console.log(
+          '[playAudio] 读取保存的进度:',
+          savedProgress,
+          '当前歌曲ID:',
+          playMusic.value.id
+        );
         if (savedProgress.songId === playMusic.value.id) {
           initialPosition = savedProgress.progress;
+          console.log('[playAudio] 恢复播放进度:', initialPosition);
         }
 
         // B站视频URL检查
@@ -371,12 +378,21 @@ export const usePlayerCoreStore = defineStore(
           }
         }
 
-        // 使用 PreloadService 加载音频
-        // 这将确保如果正在进行预加载修复，我们会等待它完成
-        // 同时也处理了时长检查和自动修复逻辑
+        // 使用 PreloadService 获取音频
+        // 优先使用已预加载的 sound（通过 consume 获取并从缓存中移除）
+        // 如果没有预加载，则进行加载
         let sound: Howl;
         try {
-          sound = await preloadService.load(playMusic.value);
+          // 先尝试消耗预加载的 sound
+          const preloadedSound = preloadService.consume(playMusic.value.id);
+          if (preloadedSound && preloadedSound.state() === 'loaded') {
+            console.log(`[playAudio] 使用预加载的音频: ${playMusic.value.name}`);
+            sound = preloadedSound;
+          } else {
+            // 没有预加载或预加载状态不正常，需要加载
+            console.log(`[playAudio] 没有预加载，开始加载: ${playMusic.value.name}`);
+            sound = await preloadService.load(playMusic.value);
+          }
         } catch (error) {
           console.error('PreloadService 加载失败:', error);
           // 如果 PreloadService 失败，尝试直接播放作为回退

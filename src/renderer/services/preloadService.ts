@@ -114,6 +114,21 @@ class PreloadService {
   }
 
   /**
+   * 消耗（使用）已预加载的音频
+   * 从缓存中移除但不 unload（由调用方管理生命周期）
+   * @returns 预加载的 Howl 实例，如果没有则返回 undefined
+   */
+  public consume(songId: string | number): Howl | undefined {
+    const sound = this.preloadedSounds.get(songId);
+    if (sound) {
+      this.preloadedSounds.delete(songId);
+      console.log(`[PreloadService] 消耗预加载的歌曲: ${songId}`);
+      return sound;
+    }
+    return undefined;
+  }
+
+  /**
    * 清理所有预加载资源
    */
   public clearAll() {

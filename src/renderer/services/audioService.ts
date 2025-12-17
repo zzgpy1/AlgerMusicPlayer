@@ -682,14 +682,19 @@ class AudioService {
                 if (isHotSwap) {
                   console.log('audioService: 执行无缝切换');
 
-                  // 1. 获取当前播放进度
-                  let currentPos = 0;
-                  if (this.currentSound) {
-                    currentPos = this.currentSound.seek() as number;
+                  // 1. 获取当前播放进度或使用指定的 seekTime
+                  let targetPos = 0;
+                  if (seekTime > 0) {
+                    // 如果有指定的 seekTime（如恢复播放进度），优先使用
+                    targetPos = seekTime;
+                    console.log(`audioService: 使用指定的 seekTime: ${seekTime}s`);
+                  } else if (this.currentSound) {
+                    // 否则同步当前进度
+                    targetPos = this.currentSound.seek() as number;
                   }
 
                   // 2. 同步新音频进度
-                  newSound.seek(currentPos);
+                  newSound.seek(targetPos);
 
                   // 3. 初始化新音频的 EQ
                   await this.disposeEQ(true);
@@ -711,7 +716,7 @@ class AudioService {
                   this.currentTrack = track;
                   this.pendingSound = null;
 
-                  console.log(`audioService: 无缝切换完成，进度同步至 ${currentPos}s`);
+                  console.log(`audioService: 无缝切换完成，进度同步至 ${targetPos}s`);
                 } else {
                   // 普通加载逻辑
                   await this.setupEQ(newSound);
