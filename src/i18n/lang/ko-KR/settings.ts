@@ -223,6 +223,7 @@ export default {
       display: '표시',
       interface: '인터페이스',
       typography: '텍스트',
+      background: '배경',
       mobile: '모바일'
     },
     pureMode: '순수 모드',
@@ -257,6 +258,7 @@ export default {
       default: '기본',
       loose: '넓음'
     },
+    contentWidth: '콘텐츠 너비',
     mobileLayout: '모바일 레이아웃',
     layoutOptions: {
       default: '기본',
@@ -270,7 +272,46 @@ export default {
       full: '전체화면'
     },
     lyricLines: '가사 줄 수',
-    mobileUnavailable: '이 설정은 모바일에서만 사용 가능합니다'
+    mobileUnavailable: '이 설정은 모바일에서만 사용 가능합니다',
+    // 배경 설정
+    background: {
+      useCustomBackground: '사용자 정의 배경 사용',
+      backgroundMode: '배경 모드',
+      modeOptions: {
+        solid: '단색',
+        gradient: '그라데이션',
+        image: '이미지',
+        css: '사용자 정의 CSS'
+      },
+      solidColor: '색상 선택',
+      presetColors: '프리셋 색상',
+      customColor: '사용자 정의 색상',
+      gradientEditor: '그라데이션 편집기',
+      gradientColors: '그라데이션 색상',
+      gradientDirection: '그라데이션 방향',
+      directionOptions: {
+        toBottom: '위에서 아래로',
+        toRight: '왼쪽에서 오른쪽으로',
+        toBottomRight: '왼쪽 위에서 오른쪽 아래로',
+        angle45: '45도',
+        toTop: '아래에서 위로',
+        toLeft: '오른쪽에서 왼쪽으로'
+      },
+      addColor: '색상 추가',
+      removeColor: '색상 제거',
+      imageUpload: '이미지 업로드',
+      imagePreview: '이미지 미리보기',
+      clearImage: '이미지 지우기',
+      imageBlur: '흐림',
+      imageBrightness: '밝기',
+      customCss: '사용자 정의 CSS 스타일',
+      customCssPlaceholder: 'CSS 스타일 입력, 예: background: linear-gradient(...)',
+      customCssHelp: '모든 CSS background 속성 지원',
+      reset: '기본값으로 재설정',
+      fileSizeLimit: '이미지 크기 제한: 20MB',
+      invalidImageFormat: '잘못된 이미지 형식',
+      imageTooLarge: '이미지가 너무 큽니다. 20MB 미만의 이미지를 선택하세요'
+    }
   },
   translationEngine: '가사 번역 엔진',
   translationEngineOptions: {

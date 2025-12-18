@@ -217,6 +217,7 @@ export default {
       display: '顯示',
       interface: '介面',
       typography: '文字',
+      background: '背景',
       mobile: '行動端'
     },
     pureMode: '純淨模式',
@@ -244,6 +245,66 @@ export default {
       compact: '緊湊',
       default: '預設',
       loose: '寬鬆'
+    },
+    lineHeight: '行高',
+    lineHeightMarks: {
+      compact: '緊湊',
+      default: '預設',
+      loose: '寬鬆'
+    },
+    contentWidth: '內容區寬度',
+    mobileLayout: '行動端佈局',
+    layoutOptions: {
+      default: '預設',
+      ios: 'iOS 風格',
+      android: 'Android 風格'
+    },
+    mobileCoverStyle: '封面風格',
+    coverOptions: {
+      record: '唱片',
+      square: '方形',
+      full: '全螢幕'
+    },
+    lyricLines: '歌詞行數',
+    mobileUnavailable: '此設定僅在行動端可用',
+    // 背景設定
+    background: {
+      useCustomBackground: '使用自訂背景',
+      backgroundMode: '背景模式',
+      modeOptions: {
+        solid: '純色',
+        gradient: '漸層',
+        image: '圖片',
+        css: '自訂 CSS'
+      },
+      solidColor: '選擇顏色',
+      presetColors: '預設顏色',
+      customColor: '自訂顏色',
+      gradientEditor: '漸層編輯器',
+      gradientColors: '漸層顏色',
+      gradientDirection: '漸層方向',
+      directionOptions: {
+        toBottom: '上到下',
+        toRight: '左到右',
+        toBottomRight: '左上到右下',
+        angle45: '45度',
+        toTop: '下到上',
+        toLeft: '右到左'
+      },
+      addColor: '新增顏色',
+      removeColor: '移除顏色',
+      imageUpload: '上傳圖片',
+      imagePreview: '圖片預覽',
+      clearImage: '清除圖片',
+      imageBlur: '模糊度',
+      imageBrightness: '明暗度',
+      customCss: '自訂 CSS 樣式',
+      customCssPlaceholder: '輸入 CSS 樣式，如: background: linear-gradient(...)',
+      customCssHelp: '支援任意 CSS background 屬性',
+      reset: '重設為預設',
+      fileSizeLimit: '圖片大小限制: 20MB',
+      invalidImageFormat: '無效的圖片格式',
+      imageTooLarge: '圖片過大，請選擇小於 20MB 的圖片'
     }
   },
   themeColor: {
@@ -270,6 +331,46 @@ export default {
   translationEngineOptions: {
     none: '關閉',
     opencc: 'OpenCC 繁化'
+  },
+  shortcutSettings: {
+    title: '快捷鍵設定',
+    shortcut: '快捷鍵',
+    shortcutDesc: '自訂快捷鍵',
+    shortcutConflict: '快捷鍵衝突',
+    inputPlaceholder: '點擊輸入快捷鍵',
+    resetShortcuts: '恢復預設',
+    disableAll: '全部停用',
+    enableAll: '全部啟用',
+    togglePlay: '播放/暫停',
+    prevPlay: '上一首',
+    nextPlay: '下一首',
+    volumeUp: '增加音量',
+    volumeDown: '減少音量',
+    toggleFavorite: '收藏/取消收藏',
+    toggleWindow: '顯示/隱藏視窗',
+    scopeGlobal: '全域',
+    scopeApp: '應用程式內',
+    enabled: '已啟用',
+    disabled: '已停用',
+    messages: {
+      resetSuccess: '已恢復預設快捷鍵，請記得儲存',
+      conflict: '存在快捷鍵衝突，請重新設定',
+      saveSuccess: '快捷鍵設定已儲存',
+      saveError: '快捷鍵儲存失敗，請重試',
+      cancelEdit: '已取消修改',
+      disableAll: '已停用所有快捷鍵，請記得儲存',
+      enableAll: '已啟用所有快捷鍵，請記得儲存'
+    }
+  },
+  remoteControl: {
+    title: '遠端控制',
+    enable: '啟用遠端控制',
+    port: '服務連接埠',
+    allowedIps: '允許的 IP 位址',
+    addIp: '新增 IP',
+    emptyListHint: '空白清單表示允許所有 IP 存取',
+    saveSuccess: '遠端控制設定已儲存',
+    accessInfo: '遠端控制存取位址：'
   },
   cookie: {
     title: 'Cookie設定',

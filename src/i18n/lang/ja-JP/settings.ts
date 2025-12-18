@@ -222,6 +222,7 @@ export default {
       display: '表示',
       interface: 'インターフェース',
       typography: 'テキスト',
+      background: '背景',
       mobile: 'モバイル'
     },
     pureMode: 'ピュアモード',
@@ -256,6 +257,7 @@ export default {
       default: 'デフォルト',
       loose: 'ゆったり'
     },
+    contentWidth: 'コンテンツ幅',
     mobileLayout: 'モバイルレイアウト',
     layoutOptions: {
       default: 'デフォルト',
@@ -269,7 +271,46 @@ export default {
       full: 'フルスクリーン'
     },
     lyricLines: '歌詞行数',
-    mobileUnavailable: 'この設定はモバイルでのみ利用可能です'
+    mobileUnavailable: 'この設定はモバイルでのみ利用可能です',
+    // 背景設定
+    background: {
+      useCustomBackground: 'カスタム背景を使用',
+      backgroundMode: '背景モード',
+      modeOptions: {
+        solid: '単色',
+        gradient: 'グラデーション',
+        image: '画像',
+        css: 'カスタム CSS'
+      },
+      solidColor: '色を選択',
+      presetColors: 'プリセットカラー',
+      customColor: 'カスタムカラー',
+      gradientEditor: 'グラデーションエディター',
+      gradientColors: 'グラデーションカラー',
+      gradientDirection: 'グラデーション方向',
+      directionOptions: {
+        toBottom: '上から下',
+        toRight: '左から右',
+        toBottomRight: '左上から右下',
+        angle45: '45度',
+        toTop: '下から上',
+        toLeft: '右から左'
+      },
+      addColor: '色を追加',
+      removeColor: '色を削除',
+      imageUpload: '画像をアップロード',
+      imagePreview: '画像プレビュー',
+      clearImage: '画像をクリア',
+      imageBlur: 'ぼかし',
+      imageBrightness: '明るさ',
+      customCss: 'カスタム CSS スタイル',
+      customCssPlaceholder: 'CSSスタイルを入力、例: background: linear-gradient(...)',
+      customCssHelp: '任意のCSS background プロパティをサポート',
+      reset: 'デフォルトにリセット',
+      fileSizeLimit: '画像サイズ制限: 20MB',
+      invalidImageFormat: '無効な画像形式',
+      imageTooLarge: '画像が大きすぎます。20MB未満の画像を選択してください'
+    }
   },
   translationEngine: '歌詞翻訳エンジン',
   translationEngineOptions: {

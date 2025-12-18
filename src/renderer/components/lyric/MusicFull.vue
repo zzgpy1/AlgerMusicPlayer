@@ -3,19 +3,34 @@
     v-model:show="isVisible"
     height="100%"
     placement="bottom"
-    :style="{ background: currentBackground || background }"
+    :style="drawerBaseStyle"
     :to="`#layout-main`"
     :z-index="9998"
   >
-    <div id="drawer-target" :class="[config.theme]">
+    <!-- 背景层（用于图片模糊和明暗效果） -->
+    <div
+      v-if="
+        config.useCustomBackground && config.backgroundMode === 'image' && config.backgroundImage
+      "
+      class="background-layer"
+      :style="backgroundImageStyle"
+    ></div>
+    <div id="drawer-target" :class="[config.theme]" class="relative z-10">
+      <!-- 左侧关闭按钮 -->
       <div
-        class="control-buttons-container absolute top-8 left-8 right-8"
+        class="control-left absolute top-8 left-8 z-[9999]"
         :class="{ 'pure-mode': config.pureModeEnabled }"
       >
         <div class="control-btn" @click="closeMusicFull">
           <i class="ri-arrow-down-s-line"></i>
         </div>
+      </div>
 
+      <!-- 右侧功能按钮组 -->
+      <div
+        class="control-right absolute top-8 right-8 z-[9999]"
+        :class="{ 'pure-mode': config.pureModeEnabled }"
+      >
         <n-popover trigger="click" placement="bottom">
           <template #trigger>
             <div class="control-btn">
@@ -24,82 +39,40 @@
           </template>
           <lyric-settings ref="lyricSettingsRef" />
         </n-popover>
-      </div>
 
-      <div
-        v-if="!config.hideCover"
-        class="music-img"
-        :class="{ 'only-cover': config.hideLyrics }"
-        :style="{ color: textColors.theme === 'dark' ? '#000000' : '#ffffff' }"
-      >
-        <div class="img-container">
-          <cover3-d
-            ref="PicImgRef"
-            :src="getImgUrl(playMusic?.picUrl, '500y500')"
-            :loading="playMusic?.playLoading"
-            :max-tilt="12"
-            :scale="1.03"
-            :shine-intensity="0.25"
-          />
-        </div>
-        <div class="music-info">
-          <div class="music-content-name" v-html="playMusic.name"></div>
-          <div class="music-content-singer">
-            <n-ellipsis
-              class="text-ellipsis"
-              line-clamp="2"
-              :tooltip="{
-                contentStyle: { maxWidth: '600px' },
-                zIndex: 99999
-              }"
-            >
-              <span
-                v-for="(item, index) in artistList"
-                :key="index"
-                class="cursor-pointer hover:text-green-500"
-                @click="handleArtistClick(item.id)"
-              >
-                {{ item.name }}
-                {{ index < artistList.length - 1 ? ' / ' : '' }}
-              </span>
-            </n-ellipsis>
-          </div>
-          <simple-play-bar
-            v-if="!config.hideMiniPlayBar"
-            class="mt-4"
-            :pure-mode-enabled="config.pureModeEnabled"
-            :isDark="textColors.theme === 'dark'"
-          />
+        <div class="control-btn" @click="toggleFullScreen">
+          <i :class="isFullScreen ? 'ri-fullscreen-exit-line' : 'ri-fullscreen-line'"></i>
         </div>
       </div>
 
-      <div
-        class="music-content"
-        :class="{
-          center: config.centerLyrics,
-          hide: config.hideLyrics
-        }"
-      >
-        <n-layout
-          ref="lrcSider"
-          class="music-lrc"
-          :style="{
-            height: config.hidePlayBar ? '85vh' : '65vh',
-            width: isMobile ? '100vw' : config.hideCover ? '50vw' : '500px'
-          }"
-          :native-scrollbar="false"
-          @mouseover="mouseOverLayout"
-          @mouseleave="mouseLeaveLayout"
+      <div class="content-wrapper" :style="{ width: `${config.contentWidth}%` }">
+        <!-- 左侧：封面区域 -->
+        <div
+          v-if="!config.hideCover"
+          class="left-side"
+          :class="{ 'only-cover': config.hideLyrics }"
         >
-          <!-- 歌曲信息 -->
-          <div ref="lrcContainer" class="music-lrc-container">
-            <div
-              v-if="config.hideCover"
-              class="music-info-header"
-              :style="{ textAlign: config.centerLyrics ? 'center' : 'left' }"
-            >
-              <div class="music-info-name" v-html="playMusic.name"></div>
-              <div class="music-info-singer">
+          <div class="img-container">
+            <cover3-d
+              ref="PicImgRef"
+              :src="getImgUrl(playMusic?.picUrl, '500y500')"
+              :loading="playMusic?.playLoading"
+              :max-tilt="12"
+              :scale="1.03"
+              :shine-intensity="0.25"
+            />
+          </div>
+          <div class="music-info">
+            <div class="music-content-name" v-html="playMusic.name"></div>
+            <div class="music-content-singer">
+              <n-ellipsis
+                class="text-ellipsis"
+                line-clamp="2"
+                :tooltip="{
+                  contentStyle: { maxWidth: '600px' },
+                  zIndex: 99999
+                }"
+              >
                 <span
                   v-for="(item, index) in artistList"
                   :key="index"
@@ -109,53 +82,99 @@
                   {{ item.name }}
                   {{ index < artistList.length - 1 ? ' / ' : '' }}
                 </span>
-              </div>
+              </n-ellipsis>
             </div>
-            <!-- 无时间戳歌词提示 -->
-            <div v-if="!supportAutoScroll" class="music-lrc-text no-scroll-tip">
-              <span>{{ t('player.lrc.noAutoScroll') }}</span>
-            </div>
-            <div
-              v-for="(item, index) in lrcArray"
-              :id="`music-lrc-text-${index}`"
-              :key="index"
-              class="music-lrc-text"
-              :class="{
-                'now-text': index === nowIndex,
-                'hover-text': item.text && item.startTime !== -1
-              }"
-              @click="item.startTime !== -1 ? setAudioTime(index) : null"
-            >
-              <!-- 逐字歌词显示 -->
-              <div
-                v-if="item.hasWordByWord && item.words && item.words.length > 0"
-                class="word-by-word-lyric"
-              >
-                <template v-for="(word, wordIndex) in item.words" :key="wordIndex">
-                  <span class="lyric-word" :style="getWordStyle(index, wordIndex, word)">
-                    {{ word.text }} </span
-                  ><span class="lyric-word" v-if="word.space">&nbsp;</span></template
-                >
-              </div>
-              <!-- 普通歌词显示 -->
-              <span v-else :style="getLrcStyle(index)">{{ item.text }}</span>
-              <div v-show="config.showTranslation" class="music-lrc-text-tr">
-                {{ item.trText }}
-              </div>
-            </div>
-
-            <!-- 无歌词 -->
-            <div v-if="!lrcArray.length" class="music-lrc-text">
-              <span>{{ t('player.lrc.noLrc') }}</span>
-            </div>
+            <simple-play-bar
+              v-if="!config.hideMiniPlayBar"
+              class="mt-4"
+              :pure-mode-enabled="config.pureModeEnabled"
+              :isDark="textColors.theme === 'dark'"
+            />
           </div>
-          <!-- 歌词右下角矫正按钮组件 -->
-          <lyric-correction-control
-            v-if="!isMobile"
-            :correction-time="correctionTime"
-            @adjust="adjustCorrectionTime"
-          />
-        </n-layout>
+        </div>
+
+        <!-- 右侧：歌词区域 -->
+        <div
+          class="right-side"
+          :class="{
+            center: config.centerLyrics,
+            hide: config.hideLyrics,
+            'full-width': config.hideCover
+          }"
+        >
+          <n-layout
+            ref="lrcSider"
+            class="music-lrc"
+            :native-scrollbar="false"
+            @mouseover="mouseOverLayout"
+            @mouseleave="mouseLeaveLayout"
+          >
+            <!-- 歌曲信息 -->
+            <div ref="lrcContainer" class="music-lrc-container">
+              <div
+                v-if="config.hideCover"
+                class="music-info-header"
+                :style="{ textAlign: config.centerLyrics ? 'center' : 'left' }"
+              >
+                <div class="music-info-name" v-html="playMusic.name"></div>
+                <div class="music-info-singer">
+                  <span
+                    v-for="(item, index) in artistList"
+                    :key="index"
+                    class="cursor-pointer hover:text-green-500"
+                    @click="handleArtistClick(item.id)"
+                  >
+                    {{ item.name }}
+                    {{ index < artistList.length - 1 ? ' / ' : '' }}
+                  </span>
+                </div>
+              </div>
+              <!-- 无时间戳歌词提示 -->
+              <div v-if="!supportAutoScroll" class="music-lrc-text no-scroll-tip">
+                <span>{{ t('player.lrc.noAutoScroll') }}</span>
+              </div>
+              <div
+                v-for="(item, index) in lrcArray"
+                :id="`music-lrc-text-${index}`"
+                :key="index"
+                class="music-lrc-text"
+                :class="{
+                  'now-text': index === nowIndex,
+                  'hover-text': item.text && item.startTime !== -1
+                }"
+                @click="item.startTime !== -1 ? setAudioTime(index) : null"
+              >
+                <!-- 逐字歌词显示 -->
+                <div
+                  v-if="item.hasWordByWord && item.words && item.words.length > 0"
+                  class="word-by-word-lyric"
+                >
+                  <template v-for="(word, wordIndex) in item.words" :key="wordIndex">
+                    <span class="lyric-word" :style="getWordStyle(index, wordIndex, word)">
+                      {{ word.text }} </span
+                    ><span class="lyric-word" v-if="word.space">&nbsp;</span></template
+                  >
+                </div>
+                <!-- 普通歌词显示 -->
+                <span v-else :style="getLrcStyle(index)">{{ item.text }}</span>
+                <div v-show="config.showTranslation" class="music-lrc-text-tr">
+                  {{ item.trText }}
+                </div>
+              </div>
+
+              <!-- 无歌词 -->
+              <div v-if="!lrcArray.length" class="music-lrc-text">
+                <span>{{ t('player.lrc.noLrc') }}</span>
+              </div>
+            </div>
+            <!-- 歌词右下角矫正按钮组件 -->
+            <lyric-correction-control
+              v-if="!isMobile"
+              :correction-time="correctionTime"
+              @adjust="adjustCorrectionTime"
+            />
+          </n-layout>
+        </div>
       </div>
     </div>
   </n-drawer>
@@ -197,9 +216,57 @@ const lrcContainer = ref<HTMLElement | null>(null);
 const currentBackground = ref('');
 const animationFrame = ref<number | null>(null);
 const isDark = ref(false);
+
+// 计算自定义背景样式
+const customBackgroundStyle = computed(() => {
+  if (!config.value.useCustomBackground) {
+    return null;
+  }
+
+  switch (config.value.backgroundMode) {
+    case 'solid':
+      return config.value.solidColor;
+    case 'gradient': {
+      const { colors, direction } = config.value.gradientColors;
+      return `linear-gradient(${direction}, ${colors.join(', ')})`;
+    }
+    case 'image':
+      if (!config.value.backgroundImage) return null;
+      // 构建完整的背景样式，包括滤镜效果
+      return config.value.backgroundImage;
+    case 'css':
+      return config.value.customCss || null;
+    default:
+      return null;
+  }
+});
+
+// drawer 基础样式（非图片模式）
+const drawerBaseStyle = computed(() => {
+  // 图片模式时不设置背景，使用单独的背景层
+  if (config.value.useCustomBackground && config.value.backgroundMode === 'image') {
+    return { background: 'transparent' };
+  }
+  // 其他模式正常设置背景
+  if (config.value.useCustomBackground && customBackgroundStyle.value) {
+    return { background: customBackgroundStyle.value };
+  }
+  return { background: currentBackground.value || props.background };
+});
+
+// 背景图片层样式（只在图片模式下使用）
+const backgroundImageStyle = computed(() => {
+  const blur = config.value.imageBlur || 0;
+  const brightness = config.value.imageBrightness || 100;
+  return {
+    backgroundImage: `url(${config.value.backgroundImage})`,
+    filter: `blur(${blur}px) brightness(${brightness}%)`
+  };
+});
 const showStickyHeader = ref(false);
 const lyricSettingsRef = ref<InstanceType<typeof LyricSettings>>();
 const isSongChanging = ref(false);
+const isFullScreen = ref(false);
 
 const config = ref<LyricConfig>({ ...DEFAULT_LYRIC_CONFIG });
 
@@ -355,13 +422,36 @@ const setTextColors = (background: string) => {
 watch(
   () => props.background,
   (newBg) => {
-    if (config.value.theme === 'default') {
+    if (config.value.useCustomBackground) {
+      // 使用自定义背景时,根据自定义背景计算文字颜色
+      if (customBackgroundStyle.value) {
+        setTextColors(customBackgroundStyle.value);
+      }
+    } else if (config.value.theme === 'default') {
       setTextColors(newBg);
     } else {
       setTextColors(themeMusic[config.value.theme] || props.background);
     }
   },
   { immediate: true }
+);
+
+// 监听自定义背景配置变化
+watch(
+  () => [config.value.useCustomBackground, customBackgroundStyle.value] as const,
+  ([useCustom, customBg]) => {
+    if (useCustom && customBg && typeof customBg === 'string') {
+      setTextColors(customBg);
+    } else {
+      // 回退到主题模式
+      if (config.value.theme === 'default') {
+        setTextColors(props.background);
+      } else {
+        setTextColors(themeMusic[config.value.theme] || props.background);
+      }
+    }
+  },
+  { deep: true }
 );
 
 const { getLrcStyle: originalLrcStyle } = useLyricProgress();
@@ -519,24 +609,56 @@ const handleScroll = () => {
 const playerStore = usePlayerStore();
 
 const closeMusicFull = () => {
+  // 退出全屏模式
+  if (isFullScreen.value && document.fullscreenElement) {
+    document.exitFullscreen();
+  }
   isVisible.value = false;
   playerStore.setMusicFull(false);
 };
 
-// 添加滚动监听
+// 全屏切换方法
+const toggleFullScreen = async () => {
+  try {
+    if (!document.fullscreenElement) {
+      // 进入全屏
+      await document.documentElement.requestFullscreen();
+      isFullScreen.value = true;
+    } else {
+      // 退出全屏
+      await document.exitFullscreen();
+      isFullScreen.value = false;
+    }
+  } catch (error) {
+    console.error('全屏切换失败:', error);
+  }
+};
+
+// 监听全屏状态变化
+const handleFullScreenChange = () => {
+  isFullScreen.value = !!document.fullscreenElement;
+};
+
+// 添加滚动监听和全屏状态监听
 onMounted(() => {
   if (lrcSider.value?.$el) {
     lrcSider.value.$el.addEventListener('scroll', handleScroll);
   }
+  document.addEventListener('fullscreenchange', handleFullScreenChange);
 });
 
-// 移除滚动监听
+// 移除滚动监听和全屏状态监听
 onBeforeUnmount(() => {
   if (animationFrame.value) {
     cancelAnimationFrame(animationFrame.value);
   }
   if (lrcSider.value?.$el) {
     lrcSider.value.$el.removeEventListener('scroll', handleScroll);
+  }
+  document.removeEventListener('fullscreenchange', handleFullScreenChange);
+  // 退出全屏模式
+  if (document.fullscreenElement) {
+    document.exitFullscreen();
   }
 });
 
@@ -621,6 +743,18 @@ defineExpose({
   }
 }
 
+.background-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+}
+
 .drawer-back {
   @apply absolute bg-cover bg-center;
   z-index: -1;
@@ -635,127 +769,138 @@ defineExpose({
 }
 
 #drawer-target {
-  @apply top-0 left-0 absolute overflow-hidden rounded px-24 flex items-center justify-center w-full h-full py-8;
+  @apply top-0 left-0 absolute overflow-hidden rounded w-full h-full;
   animation-duration: 300ms;
 
-  .music-img {
-    @apply flex-1 flex justify-center mr-16 flex-col items-center;
-    max-width: 360px;
-    max-height: 360px;
+  .content-wrapper {
+    @apply grid items-center mx-auto h-full;
+    grid-template-columns: minmax(300px, 40%) 1fr;
+    gap: 4rem;
+    max-width: 1600px;
+    padding: 2rem;
+    transition: width 0.3s ease;
+
+    @media (max-width: 1024px) {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      gap: 2rem;
+    }
+  }
+
+  .left-side {
+    @apply flex flex-col items-center justify-center h-full;
     transition: all 0.3s ease;
 
     &.only-cover {
-      @apply mr-0 flex-initial;
-      max-width: none;
-      max-height: none;
+      @apply col-span-2;
 
       .img-container {
-        @apply w-[50vh] h-[50vh] mb-8;
+        @apply w-[60vh] aspect-square;
       }
 
       .music-info {
-        @apply text-center w-[600px];
-
-        .music-content-name {
-          @apply text-4xl mb-4 line-clamp-2;
-          color: var(--text-color-active);
-        }
-
-        .music-content-singer {
-          @apply text-xl mb-8 opacity-80;
-          color: var(--text-color-primary);
-        }
+        @apply max-w-[800px];
       }
     }
 
     .img-container {
-      @apply relative w-full h-full;
+      @apply relative w-[45vh] mb-8 aspect-square;
+      max-width: 100%;
     }
 
     .music-info {
-      @apply w-full mt-4;
+      @apply w-full text-center max-w-[400px];
 
       .music-content-name {
-        @apply text-2xl font-bold;
+        @apply text-3xl font-bold mb-2 line-clamp-2;
         color: var(--text-color-active);
       }
 
       .music-content-singer {
-        @apply text-base mt-2 opacity-80;
+        @apply text-lg opacity-80;
         color: var(--text-color-primary);
       }
     }
   }
 
-  .music-content {
-    @apply flex flex-col justify-center items-center relative;
-    width: 500px;
-    transition: all 0.3s ease;
+  .right-side {
+    @apply flex flex-col justify-center h-full relative overflow-hidden;
+
+    &.full-width {
+      @apply col-span-2;
+    }
 
     &.center {
-      @apply w-auto;
-
       .music-lrc {
-        @apply w-full max-w-3xl mx-auto;
+        @apply w-full mx-auto text-center;
       }
 
       .music-lrc-text {
         @apply text-center;
+        transform-origin: center center;
+      }
+
+      .word-by-word-lyric {
+        @apply justify-center;
       }
     }
 
     &.hide {
       @apply hidden;
     }
-  }
 
-  .music-content-time {
-    display: none;
-    @apply flex justify-center items-center;
-  }
+    .music-lrc {
+      @apply w-full h-full bg-transparent;
+      mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 15%,
+        black 85%,
+        transparent 100%
+      );
+      -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 15%,
+        black 85%,
+        transparent 100%
+      );
 
-  .music-lrc-container {
-    padding-top: 30vh;
-    .music-lrc-text:last-child {
-      margin-bottom: 200px;
-    }
-  }
+      .music-info-header {
+        @apply mb-8;
 
-  .music-lrc {
-    background-color: inherit;
-    width: 500px;
-    height: 550px;
-    position: relative;
-    mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      transparent 0%,
-      black 10%,
-      black 90%,
-      transparent 100%
-    );
+        .music-info-name {
+          @apply text-4xl font-bold mb-2 line-clamp-2;
+          color: var(--text-color-active);
+        }
 
-    .music-info-header {
-      @apply mb-8;
-
-      .music-info-name {
-        @apply text-4xl font-bold mb-2 line-clamp-2;
-        color: var(--text-color-active);
-      }
-
-      .music-info-singer {
-        @apply text-base;
-        color: var(--text-color-primary);
+        .music-info-singer {
+          @apply text-xl opacity-80;
+          color: var(--text-color-primary);
+        }
       }
     }
 
-    &-text {
-      @apply text-2xl cursor-pointer font-bold px-2 py-4;
+    .music-lrc-container {
+      padding: 50vh 0;
+      min-height: 100%;
+    }
+
+    .music-lrc-text {
+      @apply text-2xl cursor-pointer font-bold px-4 py-3;
+      font-family: var(--current-font-family);
       transition: all 0.3s ease;
       background-color: transparent;
       font-size: var(--lyric-font-size, 22px) !important;
       letter-spacing: var(--lyric-letter-spacing, 0) !important;
       line-height: var(--lyric-line-height, 2) !important;
+      opacity: 0.6;
+      transform-origin: left center;
+
+      &.now-text {
+        opacity: 1;
+        transform: scale(1.05);
+      }
 
       &.no-scroll-tip {
         @apply text-base opacity-60 cursor-default py-2;
@@ -819,7 +964,11 @@ defineExpose({
 
 .mobile {
   #drawer-target {
-    @apply flex-col p-4 pt-8 justify-start;
+    @apply p-4 pt-8;
+
+    .content-wrapper {
+      @apply flex-col justify-start p-0;
+    }
 
     .music-img {
       display: none;
@@ -856,19 +1005,11 @@ defineExpose({
 }
 
 // 添加全局字体样式
+// 字体设置已移至上方或不再需要单独的 drawer-target 块
 :root {
   --current-font-family:
     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
-}
-
-#drawer-target {
-  @apply top-0 left-0 absolute overflow-hidden rounded px-24 flex items-center justify-center w-full h-full py-8;
-  animation-duration: 300ms;
-
-  .music-lrc-text {
-    font-family: var(--current-font-family);
-  }
 }
 
 .close-btn {
@@ -880,26 +1021,29 @@ defineExpose({
   }
 }
 
-.control-buttons-container {
-  @apply flex justify-between items-start z-[9999];
-
+.control-left,
+.control-right {
   &.pure-mode {
-    @apply pointer-events-auto; /* 容器需要能接收hover事件 */
+    @apply pointer-events-auto;
 
     .control-btn {
       @apply opacity-0 transition-all duration-300;
-      pointer-events: none; /* 按钮隐藏时不接收事件 */
+      pointer-events: none;
     }
 
     &:hover .control-btn {
       @apply opacity-100;
-      pointer-events: auto; /* hover时按钮可以点击 */
+      pointer-events: auto;
     }
   }
 
   &:not(.pure-mode) .control-btn {
     pointer-events: auto;
   }
+}
+
+.control-right {
+  @apply flex items-center gap-2;
 }
 
 .control-btn {
@@ -926,5 +1070,11 @@ defineExpose({
     opacity: 1 !important;
     pointer-events: auto !important;
   }
+}
+
+/* 移除 Popover padding */
+:deep(.n-popover) {
+  padding: 0 !important;
+  background-color: transparent !important;
 }
 </style>

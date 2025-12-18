@@ -220,6 +220,7 @@ export default {
       display: '显示',
       interface: '界面',
       typography: '文字',
+      background: '背景',
       mobile: '移动端'
     },
     pureMode: '纯净模式',
@@ -254,6 +255,7 @@ export default {
       default: '默认',
       loose: '宽松'
     },
+    contentWidth: '内容区宽度',
     mobileLayout: '移动端布局',
     layoutOptions: {
       default: '默认',
@@ -267,7 +269,46 @@ export default {
       full: '全屏'
     },
     lyricLines: '歌词行数',
-    mobileUnavailable: '此设置仅在移动端可用'
+    mobileUnavailable: '此设置仅在移动端可用',
+    // 背景设置
+    background: {
+      useCustomBackground: '使用自定义背景',
+      backgroundMode: '背景模式',
+      modeOptions: {
+        solid: '纯色',
+        gradient: '渐变',
+        image: '图片',
+        css: '自定义 CSS'
+      },
+      solidColor: '选择颜色',
+      presetColors: '预设颜色',
+      customColor: '自定义颜色',
+      gradientEditor: '渐变编辑器',
+      gradientColors: '渐变颜色',
+      gradientDirection: '渐变方向',
+      directionOptions: {
+        toBottom: '上到下',
+        toRight: '左到右',
+        toBottomRight: '左上到右下',
+        angle45: '45度',
+        toTop: '下到上',
+        toLeft: '右到左'
+      },
+      addColor: '添加颜色',
+      removeColor: '移除颜色',
+      imageUpload: '上传图片',
+      imagePreview: '图片预览',
+      clearImage: '清除图片',
+      imageBlur: '模糊度',
+      imageBrightness: '明暗度',
+      customCss: '自定义 CSS 样式',
+      customCssPlaceholder: '输入 CSS 样式,如: background: linear-gradient(...)',
+      customCssHelp: '支持任意 CSS background 属性',
+      reset: '重置为默认',
+      fileSizeLimit: '图片大小限制: 20MB',
+      invalidImageFormat: '无效的图片格式',
+      imageTooLarge: '图片过大,请选择小于 20MB 的图片'
+    }
   },
   translationEngine: '歌詞翻譯引擎',
   translationEngineOptions: {

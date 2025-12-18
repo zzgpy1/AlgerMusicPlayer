@@ -223,6 +223,7 @@ export default {
       display: 'Display',
       interface: 'Interface',
       typography: 'Typography',
+      background: 'Background',
       mobile: 'Mobile'
     },
     pureMode: 'Pure Mode',
@@ -257,6 +258,7 @@ export default {
       default: 'Default',
       loose: 'Loose'
     },
+    contentWidth: 'Content Width',
     mobileLayout: 'Mobile Layout',
     layoutOptions: {
       default: 'Default',
@@ -270,7 +272,46 @@ export default {
       full: 'Full Screen'
     },
     lyricLines: 'Lyric Lines',
-    mobileUnavailable: 'This setting is only available on mobile devices'
+    mobileUnavailable: 'This setting is only available on mobile devices',
+    // Background settings
+    background: {
+      useCustomBackground: 'Use Custom Background',
+      backgroundMode: 'Background Mode',
+      modeOptions: {
+        solid: 'Solid',
+        gradient: 'Gradient',
+        image: 'Image',
+        css: 'Custom CSS'
+      },
+      solidColor: 'Select Color',
+      presetColors: 'Preset Colors',
+      customColor: 'Custom Color',
+      gradientEditor: 'Gradient Editor',
+      gradientColors: 'Gradient Colors',
+      gradientDirection: 'Gradient Direction',
+      directionOptions: {
+        toBottom: 'Top to Bottom',
+        toRight: 'Left to Right',
+        toBottomRight: 'Top Left to Bottom Right',
+        angle45: '45 Degrees',
+        toTop: 'Bottom to Top',
+        toLeft: 'Right to Left'
+      },
+      addColor: 'Add Color',
+      removeColor: 'Remove Color',
+      imageUpload: 'Upload Image',
+      imagePreview: 'Image Preview',
+      clearImage: 'Clear Image',
+      imageBlur: 'Blur',
+      imageBrightness: 'Brightness',
+      customCss: 'Custom CSS Style',
+      customCssPlaceholder: 'Enter CSS style, e.g.: background: linear-gradient(...)',
+      customCssHelp: 'Supports any CSS background property',
+      reset: 'Reset to Default',
+      fileSizeLimit: 'Image size limit: 20MB',
+      invalidImageFormat: 'Invalid image format',
+      imageTooLarge: 'Image too large, please select an image smaller than 20MB'
+    }
   },
   translationEngine: 'Lyric Translation Engine',
   translationEngineOptions: {
