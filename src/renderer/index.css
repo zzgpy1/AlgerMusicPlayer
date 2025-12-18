@@ -64,6 +64,10 @@
 
 :root {
   --text-color: #000000dd;
+  --safe-area-inset-top: 0px;
+  --safe-area-inset-right: 0px;
+  --safe-area-inset-bottom: 10px;
+  --safe-area-inset-left: 0px;
 }
 
 :root[class='dark'] {

@@ -41,7 +41,7 @@ defineOptions({
 
 .mobile {
   .main-content {
-    @apply flex-col mx-4;
+    @apply flex-col mx-4 mb-40;
   }
   :deep(.favorite-page) {
     @apply p-0 mx-4 h-full;

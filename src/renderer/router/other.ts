@@ -108,6 +108,28 @@ const otherRouter = [
       back: true
     },
     component: () => import('@/views/music/HistoryRecommend.vue')
+  },
+  {
+    path: '/mobile-search',
+    name: 'mobileSearch',
+    meta: {
+      title: '搜索',
+      keepAlive: false,
+      showInMenu: false,
+      back: true
+    },
+    component: () => import('@/views/mobile-search/index.vue')
+  },
+  {
+    path: '/mobile-search-result',
+    name: 'mobileSearchResult',
+    meta: {
+      title: '搜索结果',
+      keepAlive: false,
+      showInMenu: false,
+      back: true
+    },
+    component: () => import('@/views/mobile-search-result/index.vue')
   }
 ];
 export default otherRouter;

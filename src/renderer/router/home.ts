@@ -17,8 +17,7 @@ const layoutRouter = [
       title: 'comp.search',
       noScroll: true,
       icon: 'icon-Search',
-      keepAlive: true,
-      isMobile: true
+      keepAlive: true
     },
     component: () => import('@/views/search/index.vue')
   },
@@ -62,7 +61,8 @@ const layoutRouter = [
     meta: {
       title: 'comp.history',
       icon: 'icon-a-TicketStar',
-      keepAlive: true
+      keepAlive: true,
+      isMobile: true
     }
   },
   {

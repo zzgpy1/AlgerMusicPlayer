@@ -1,6 +1,6 @@
 <template>
   <div class="flex gap-4 h-full pb-4">
-    <favorite class="flex-item" />
+    <favorite class="flex-item" v-if="!isMobile" />
     <history-list class="flex-item" />
   </div>
 </template>
@@ -10,6 +10,7 @@ defineOptions({
   name: 'History'
 });
 
+import { isMobile } from '@/utils';
 import Favorite from '@/views/favorite/index.vue';
 import HistoryList from '@/views/history/index.vue';
 </script>

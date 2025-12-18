@@ -1,6 +1,6 @@
 <template>
   <div class="history-page">
-    <div class="title-wrapper" :class="setAnimationClass('animate__fadeInRight')">
+    <div class="title-wrapper" :class="setAnimationClass('animate__fadeInRight')" v-if="!isMobile">
       <div class="title">{{ t('history.title') }}</div>
       <n-button
         secondary
@@ -54,12 +54,14 @@
             :style="setAnimationDelay(index, 30)"
           >
             <song-item class="history-item-content" :item="item" @play="handlePlay" />
-            <div class="history-item-count min-w-[60px]" v-show="currentTab === 'local'">
-              {{ t('history.playCount', { count: item.count }) }}
-            </div>
-            <div class="history-item-delete" v-show="currentTab === 'local'">
-              <i class="iconfont icon-close" @click="handleDelMusic(item)"></i>
-            </div>
+            <template v-if="!isMobile">
+              <div class="history-item-count min-w-[60px]" v-show="currentTab === 'local'">
+                {{ t('history.playCount', { count: item.count }) }}
+              </div>
+              <div class="history-item-delete" v-show="currentTab === 'local'">
+                <i class="iconfont icon-close" @click="handleDelMusic(item)"></i>
+              </div>
+            </template>
           </div>
         </template>
 
@@ -130,7 +132,7 @@ import { usePlaylistHistory } from '@/hooks/PlaylistHistoryHook';
 import { usePlayerStore } from '@/store/modules/player';
 import { useUserStore } from '@/store/modules/user';
 import type { SongResult } from '@/types/music';
-import { setAnimationClass, setAnimationDelay } from '@/utils';
+import { isMobile, setAnimationClass, setAnimationDelay } from '@/utils';
 
 // 扩展历史记录类型以包含 playTime
 interface HistoryRecord extends Partial<SongResult> {

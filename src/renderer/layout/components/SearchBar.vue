@@ -1,5 +1,5 @@
 <template>
-  <div class="search-box flex">
+  <div class="search-box flex search-bar">
     <div v-if="showBackButton" class="back-button" @click="goBack">
       <i class="ri-arrow-left-line"></i>
     </div>
@@ -364,14 +364,9 @@ const checkForUpdates = async () => {
 };
 
 const toGithubRelease = () => {
-  if (updateInfo.value.hasUpdate) {
-    settingsStore.showUpdateModal = true;
-  } else {
-    window.open('https://github.com/algerkong/AlgerMusicPlayer/releases', '_blank');
-  }
+  window.location.href = 'https://donate.alger.fun/download';
 };
 
-// ==================== 搜索建议相关的状态和方法 ====================
 const suggestions = ref<string[]>([]);
 const showSuggestions = ref(false);
 const suggestionsLoading = ref(false);
@@ -446,8 +441,6 @@ const handleKeydown = (event: KeyboardEvent) => {
       break;
   }
 };
-
-// ================================================================
 </script>
 
 <style lang="scss" scoped>

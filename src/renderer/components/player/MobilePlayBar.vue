@@ -1,13 +1,14 @@
 <template>
   <div
+    ref="playBarRef"
     class="mobile-play-bar"
     :class="[
       setAnimationClass('animate__fadeInUp'),
-      musicFullVisible ? 'play-bar-expanded' : 'play-bar-mini',
-      !shouldShowMobileMenu ? 'mobile-play-bar-no-menu' : ''
+      playerStore.musicFull ? 'play-bar-expanded' : 'play-bar-mini',
+      shouldShowMobileMenu ? 'is-menu-show' : 'is-menu-hide'
     ]"
     :style="{
-      color: musicFullVisible
+      color: playerStore.musicFull
         ? textColors.theme === 'dark'
           ? '#ffffff'
           : '#ffffff'
@@ -16,63 +17,8 @@
           : '#000000'
     }"
   >
-    <!-- 完整模式 - 在musicFullVisible为true时显示 -->
-    <template v-if="false">
-      <!-- 顶部信息区域 -->
-      <div class="music-info-header">
-        <div class="music-info-main">
-          <h1 class="music-title">{{ playMusic.name }}</h1>
-          <div class="artist-info">
-            <span class="artist-name">
-              <span v-for="(artists, artistsindex) in artistList" :key="artistsindex">
-                {{ artists.name }}{{ artistsindex < artistList.length - 1 ? ' / ' : '' }}
-              </span>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 进度条 -->
-      <div class="music-progress-bar">
-        <span class="current-time">{{ secondToMinute(nowTime) }}</span>
-        <div class="progress-wrapper">
-          <n-slider
-            v-model:value="timeSlider"
-            :step="1"
-            :max="allTime"
-            :min="0"
-            :tooltip="false"
-            class="progress-slider"
-          ></n-slider>
-        </div>
-        <span class="total-time">{{ secondToMinute(allTime) }}</span>
-      </div>
-
-      <!-- 主控制区 -->
-      <div class="player-controls">
-        <div class="control-btn like" @click="toggleFavorite">
-          <i class="iconfont ri-heart-3-fill" :class="{ 'like-active': isFavorite }"></i>
-        </div>
-        <div class="control-btn prev" @click="handlePrev">
-          <i class="iconfont ri-skip-back-fill"></i>
-        </div>
-        <div class="control-btn play-pause" @click="playMusicEvent">
-          <i class="iconfont" :class="play ? 'ri-pause-fill' : 'ri-play-fill'"></i>
-        </div>
-        <div class="control-btn next" @click="handleNext">
-          <i class="iconfont ri-skip-forward-fill"></i>
-        </div>
-        <div class="control-btn list" @click="openPlayListDrawer">
-          <i class="iconfont ri-menu-line"></i>
-        </div>
-      </div>
-
-      <!-- 定时关闭按钮 -->
-      <!-- <SleepTimerPopover mode="mobile" /> -->
-    </template>
-
     <!-- Mini模式 - 在musicFullVisible为false时显示 -->
-    <div v-if="!musicFullVisible" class="mobile-mini-controls">
+    <div v-if="!playerStore.musicFull" class="mobile-mini-controls">
       <!-- 歌曲信息 -->
       <div class="mini-song-info" @click="setMusicFull">
         <n-image
@@ -85,16 +31,17 @@
           <n-ellipsis line-clamp="1">
             <span class="mini-song-title">{{ playMusic.name }}</span>
             <span class="mx-2 text-gray-500 dark:text-gray-400">-</span>
-            <span class="mini-song-artist">
-              <span v-for="(artists, artistsindex) in artistList" :key="artistsindex">
-                {{ artists.name }}{{ artistsindex < artistList.length - 1 ? ' / ' : '' }}
-              </span>
+            <span
+              class="mini-song-artist"
+              v-for="(artists, artistsindex) in artistList"
+              :key="artistsindex"
+            >
+              {{ artists.name }}{{ artistsindex < artistList.length - 1 ? ' / ' : '' }}
             </span>
           </n-ellipsis>
         </div>
       </div>
 
-      <!-- 播放按钮 -->
       <div class="mini-playback-controls">
         <div class="mini-control-btn play" @click="playMusicEvent">
           <i class="iconfont icon" :class="play ? 'icon-stop' : 'icon-play'"></i>
@@ -104,21 +51,26 @@
     </div>
 
     <!-- 全屏播放器 -->
-    <music-full-wrapper ref="MusicFullRef" v-model="musicFullVisible" :background="background" />
+    <music-full-wrapper
+      ref="MusicFullRef"
+      v-model="playerStore.musicFull"
+      :background="background"
+    />
   </div>
 </template>
 
 <script lang="ts" setup>
-import { useThrottleFn } from '@vueuse/core';
-import { computed, ref, watch } from 'vue';
+import { useSwipe } from '@vueuse/core';
+import type { Ref } from 'vue';
+import { computed, inject, onMounted, ref, watch } from 'vue';
 
 import MusicFullWrapper from '@/components/lyric/MusicFullWrapper.vue';
-import { allTime, artistList, nowTime, playMusic, sound, textColors } from '@/hooks/MusicHook';
+import { artistList, playMusic, textColors } from '@/hooks/MusicHook';
 import { usePlayerStore } from '@/store/modules/player';
 import { useSettingsStore } from '@/store/modules/settings';
-import { getImgUrl, secondToMinute, setAnimationClass } from '@/utils';
+import { getImgUrl, setAnimationClass } from '@/utils';
 
-const shouldShowMobileMenu = inject('shouldShowMobileMenu');
+const shouldShowMobileMenu = inject('shouldShowMobileMenu') as Ref<boolean>;
 
 const playerStore = usePlayerStore();
 const settingsStore = useSettingsStore();
@@ -127,18 +79,6 @@ const settingsStore = useSettingsStore();
 const play = computed(() => playerStore.isPlay);
 // 背景颜色
 const background = ref('#000');
-
-// 播放进度条
-const throttledSeek = useThrottleFn((value: number) => {
-  if (!sound.value) return;
-  sound.value.seek(value);
-  nowTime.value = value;
-}, 50);
-
-const timeSlider = computed({
-  get: () => nowTime.value,
-  set: throttledSeek
-});
 
 // 播放控制
 function handleNext() {
@@ -151,34 +91,25 @@ function handlePrev() {
 
 // 全屏播放器
 const MusicFullRef = ref<any>(null);
-const musicFullVisible = ref(false);
 
 // 设置musicFull
 const setMusicFull = () => {
-  musicFullVisible.value = !musicFullVisible.value;
-  playerStore.setMusicFull(musicFullVisible.value);
-  if (musicFullVisible.value) {
+  playerStore.setMusicFull(!playerStore.musicFull);
+  if (playerStore.musicFull) {
     settingsStore.showArtistDrawer = false;
   }
 };
 
+watch(
+  () => playerStore.musicFull,
+  (_newVal) => {
+    // 状态栏样式更新已在 Web 环境下禁用
+  }
+);
+
 // 打开播放列表抽屉
 const openPlayListDrawer = () => {
   playerStore.setPlayListDrawerVisible(true);
-};
-
-// 收藏功能
-const isFavorite = computed(() => {
-  return playerStore.favoriteList.includes(playMusic.value.id as number);
-});
-
-const toggleFavorite = () => {
-  console.log('isFavorite.value', isFavorite.value);
-  if (isFavorite.value) {
-    playerStore.removeFromFavorite(playMusic.value.id as number);
-  } else {
-    playerStore.addToFavorite(playMusic.value.id as number);
-  }
 };
 
 // 播放暂停按钮事件
@@ -190,6 +121,20 @@ const playMusicEvent = async () => {
     playerStore.nextPlay();
   }
 };
+
+// 滑动切歌
+const playBarRef = ref<HTMLElement | null>(null);
+onMounted(() => {
+  if (playBarRef.value) {
+    const { direction } = useSwipe(playBarRef, {
+      onSwipeEnd: () => {
+        if (direction.value === 'left') handleNext();
+        if (direction.value === 'right') handlePrev();
+      },
+      threshold: 30
+    });
+  }
+});
 
 watch(
   () => playerStore.playMusic,
@@ -207,8 +152,11 @@ watch(
   animation-duration: 0.3s !important;
   transition: all 0.3s ease;
 
-  &.mobile-play-bar-no-menu {
-    @apply bottom-[10px];
+  &.is-menu-show {
+    bottom: calc(var(--safe-area-inset-bottom, 0) + 66px);
+  }
+  &.is-menu-hide {
+    bottom: calc(var(--safe-area-inset-bottom, 0) + 10px);
   }
 
   &.play-bar-expanded {
@@ -222,64 +170,10 @@ watch(
       rgba(0, 0, 0, 0.8) 80%,
       rgba(0, 0, 0, 0.9) 100%
     );
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: -50px; /* 延伸到上方 */
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-image: v-bind('`url(${getImgUrl(playMusic?.picUrl, "300y300")})`');
-      background-size: cover;
-      background-position: center;
-      filter: blur(20px);
-      opacity: 0.2;
-      z-index: -1;
-    }
   }
 
   &.play-bar-mini {
     @apply h-14 py-0;
-  }
-
-  // 顶部信息区域
-  .music-info-header {
-    @apply flex justify-between items-start px-6 pt-3 pb-2 relative z-10;
-
-    .music-info-main {
-      @apply flex flex-col;
-
-      .music-title {
-        @apply text-xl font-bold text-white mb-1;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-      }
-
-      .artist-info {
-        @apply flex items-center;
-
-        .artist-name {
-          @apply text-sm text-white opacity-90;
-        }
-      }
-    }
-
-    .action-stats {
-      @apply flex items-center gap-4;
-
-      .like-count,
-      .comment-count {
-        @apply flex items-center text-white;
-
-        i {
-          @apply text-base mr-1;
-        }
-
-        span {
-          @apply text-xs font-medium;
-        }
-      }
-    }
   }
 
   // 进度条
@@ -388,7 +282,7 @@ watch(
       }
 
       .mini-song-text {
-        @apply ml-3 min-w-0 flex-1;
+        @apply ml-3 min-w-0 flex-1 flex items-center;
 
         .mini-song-title {
           @apply text-sm font-medium;
