@@ -1,37 +1,35 @@
 <template>
-  <div class="settings-container">
+  <div class="flex h-full">
     <!-- 左侧导航栏 -->
-    <div v-if="!isMobile" class="settings-nav">
-      <div
-        v-for="section in settingSections"
-        :key="section.id"
-        class="nav-item"
-        :class="{ active: currentSection === section.id }"
-        @click="scrollToSection(section.id)"
-      >
-        {{ t(`settings.sections.${section.id}`) }}
-      </div>
-    </div>
+    <setting-nav
+      v-if="!isMobile"
+      :sections="navSections"
+      :current-section="currentSection"
+      @navigate="scrollToSection"
+    />
 
     <!-- 右侧内容区 -->
-    <n-scrollbar ref="scrollbarRef" class="settings-content" @scroll="handleScroll">
-      <div class="set-page">
+    <n-scrollbar ref="scrollbarRef" class="flex-1 h-full" @scroll="handleScroll">
+      <div class="p-4 pb-20 max-md:p-3 max-md:pb-24">
         <!-- 基础设置 -->
-        <div id="basic" ref="basicRef" class="settings-section">
-          <div class="settings-section-title">{{ t('settings.sections.basic') }}</div>
-          <div class="settings-section-content">
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.basic.themeMode') }}</div>
-                <div class="set-item-content">{{ t('settings.basic.themeModeDesc') }}</div>
-              </div>
-              <div class="flex items-center gap-3">
+        <setting-section
+          id="basic"
+          :title="t('settings.sections.basic')"
+          @ref="(el) => (sectionRefs.basic = el as HTMLElement | null)"
+        >
+          <!-- 主题设置 -->
+          <setting-item
+            :title="t('settings.basic.themeMode')"
+            :description="t('settings.basic.themeModeDesc')"
+          >
+            <template #action>
+              <div class="flex items-center gap-3 max-md:flex-wrap">
                 <div class="flex items-center gap-2">
                   <n-switch v-model:value="setData.autoTheme" @update:value="handleAutoThemeChange">
                     <template #checked><i class="ri-smartphone-line"></i></template>
                     <template #unchecked><i class="ri-settings-line"></i></template>
                   </n-switch>
-                  <span class="text-sm text-gray-500">
+                  <span class="text-sm text-gray-500 max-md:hidden">
                     {{
                       setData.autoTheme
                         ? t('settings.basic.autoTheme')
@@ -48,52 +46,49 @@
                   <template #unchecked><i class="ri-sun-line"></i></template>
                 </n-switch>
               </div>
-            </div>
+            </template>
+          </setting-item>
 
-            <!-- 语言设置 -->
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.basic.language') }}</div>
-                <div class="set-item-content">{{ t('settings.basic.languageDesc') }}</div>
-              </div>
-              <language-switcher />
-            </div>
+          <!-- 语言设置 -->
+          <setting-item
+            :title="t('settings.basic.language')"
+            :description="t('settings.basic.languageDesc')"
+          >
+            <language-switcher />
+          </setting-item>
 
-            <!-- 平板模式设置 -->
-            <div class="set-item" v-if="!isElectron">
-              <div>
-                <div class="set-item-title">{{ t('settings.basic.tabletMode') }}</div>
-                <div class="set-item-content">
-                  {{ t('settings.basic.tabletModeDesc') }}
-                </div>
-              </div>
-              <n-switch v-model:value="setData.tabletMode">
-                <template #checked><i class="ri-tablet-line"></i></template>
-                <template #unchecked><i class="ri-smartphone-line"></i></template>
-              </n-switch>
-            </div>
+          <!-- 平板模式 -->
+          <setting-item
+            v-if="!isElectron"
+            :title="t('settings.basic.tabletMode')"
+            :description="t('settings.basic.tabletModeDesc')"
+          >
+            <n-switch v-model:value="setData.tabletMode">
+              <template #checked><i class="ri-tablet-line"></i></template>
+              <template #unchecked><i class="ri-smartphone-line"></i></template>
+            </n-switch>
+          </setting-item>
 
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.translationEngine') }}</div>
-                <div class="set-item-content">{{ t('settings.translationEngine') }}</div>
-              </div>
-              <n-select
-                v-model:value="setData.lyricTranslationEngine"
-                :options="[
-                  { label: t('settings.translationEngineOptions.none'), value: 'none' },
-                  { label: t('settings.translationEngineOptions.opencc'), value: 'opencc' }
-                ]"
-                style="width: 160px"
-              />
-            </div>
+          <!-- 翻译引擎 -->
+          <setting-item
+            :title="t('settings.translationEngine')"
+            :description="t('settings.translationEngine')"
+          >
+            <n-select
+              v-model:value="setData.lyricTranslationEngine"
+              :options="translationEngineOptions"
+              class="w-40 max-md:w-full"
+            />
+          </setting-item>
 
-            <div class="set-item" v-if="isElectron">
-              <div>
-                <div class="set-item-title">{{ t('settings.basic.font') }}</div>
-                <div class="set-item-content">{{ t('settings.basic.fontDesc') }}</div>
-              </div>
-              <div class="flex gap-2">
+          <!-- 字体设置 -->
+          <setting-item
+            v-if="isElectron"
+            :title="t('settings.basic.font')"
+            :description="t('settings.basic.fontDesc')"
+          >
+            <template #action>
+              <div class="flex gap-2 max-md:flex-col max-md:w-full">
                 <n-radio-group v-model:value="setData.fontScope" class="mt-2">
                   <n-radio key="global" value="global">{{
                     t('settings.basic.fontScope.global')
@@ -108,51 +103,47 @@
                   filterable
                   multiple
                   placeholder="选择字体"
-                  style="width: 300px"
+                  class="w-[300px] max-md:w-full"
                   :render-label="renderFontLabel"
+                />
+              </div>
+            </template>
+          </setting-item>
+
+          <!-- 字体预览 -->
+          <div
+            v-if="selectedFonts.length > 0"
+            class="mt-4 p-4 max-md:p-3 rounded-lg bg-gray-50 dark:bg-dark-100 border border-gray-200 dark:border-gray-700"
+          >
+            <div class="text-sm font-medium mb-3 text-gray-600 dark:text-gray-300">
+              {{ t('settings.basic.fontPreview.title') }}
+            </div>
+            <div class="space-y-3" :style="{ fontFamily: setData.fontFamily }">
+              <div v-for="preview in fontPreviews" :key="preview.key" class="flex flex-col gap-1">
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ t(`settings.basic.fontPreview.${preview.key}`) }}
+                </div>
+                <div
+                  class="text-base text-gray-900 dark:text-gray-100 p-2 rounded bg-white dark:bg-dark border border-gray-200 dark:border-gray-700"
                 >
-                </n-select>
-              </div>
-            </div>
-
-            <div v-if="selectedFonts.length > 0" class="font-preview-container">
-              <div class="font-preview-title">{{ t('settings.basic.fontPreview.title') }}</div>
-              <div class="font-preview" :style="{ fontFamily: setData.fontFamily }">
-                <div class="preview-item">
-                  <div class="preview-label">{{ t('settings.basic.fontPreview.chinese') }}</div>
-                  <div class="preview-text">{{ t('settings.basic.fontPreview.chineseText') }}</div>
-                </div>
-                <div class="preview-item">
-                  <div class="preview-label">{{ t('settings.basic.fontPreview.english') }}</div>
-                  <div class="preview-text">{{ t('settings.basic.fontPreview.englishText') }}</div>
-                </div>
-                <div class="preview-item">
-                  <div class="preview-label">{{ t('settings.basic.fontPreview.japanese') }}</div>
-                  <div class="preview-text">{{ t('settings.basic.fontPreview.japaneseText') }}</div>
-                </div>
-                <div class="preview-item">
-                  <div class="preview-label">{{ t('settings.basic.fontPreview.korean') }}</div>
-                  <div class="preview-text">{{ t('settings.basic.fontPreview.koreanText') }}</div>
+                  {{ t(`settings.basic.fontPreview.${preview.key}Text`) }}
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- Token管理 -->
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.basic.tokenManagement') }}</div>
-                <div class="set-item-content">
-                  <div class="text-sm text-gray-500 mb-2">
-                    {{ t('settings.basic.tokenStatus') }}:
-                    {{
-                      currentToken ? t('settings.basic.tokenSet') : t('settings.basic.tokenNotSet')
-                    }}
-                  </div>
-                  <div v-if="currentToken" class="text-xs text-gray-400 mb-2 font-mono break-all">
-                    {{ currentToken.substring(0, 50) }}...
-                  </div>
-                </div>
+          <!-- Token管理 -->
+          <setting-item :title="t('settings.basic.tokenManagement')">
+            <template #description>
+              <div class="text-sm text-gray-500 mb-2">
+                {{ t('settings.basic.tokenStatus') }}:
+                {{ currentToken ? t('settings.basic.tokenSet') : t('settings.basic.tokenNotSet') }}
               </div>
+              <div v-if="currentToken" class="text-xs text-gray-400 mb-2 font-mono break-all">
+                {{ currentToken.substring(0, 50) }}...
+              </div>
+            </template>
+            <template #action>
               <div class="flex gap-2">
                 <n-button size="small" @click="showTokenModal = true">
                   {{
@@ -163,302 +154,264 @@
                   {{ t('settings.basic.clearToken') }}
                 </n-button>
               </div>
-            </div>
+            </template>
+          </setting-item>
 
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.basic.animation') }}</div>
-                <div class="set-item-content">
-                  <div class="flex items-center gap-2">
-                    <n-switch v-model:value="setData.noAnimate">
-                      <template #checked>{{ t('common.off') }}</template>
-                      <template #unchecked>{{ t('common.on') }}</template>
-                    </n-switch>
-                    <span>{{ t('settings.basic.animationDesc') }}</span>
-                  </div>
-                </div>
-              </div>
+          <!-- 动画设置 -->
+          <setting-item :title="t('settings.basic.animation')">
+            <template #description>
               <div class="flex items-center gap-2">
-                <span class="text-sm text-gray-400" v-if="!isMobile"
+                <n-switch v-model:value="setData.noAnimate">
+                  <template #checked>{{ t('common.off') }}</template>
+                  <template #unchecked>{{ t('common.on') }}</template>
+                </n-switch>
+                <span>{{ t('settings.basic.animationDesc') }}</span>
+              </div>
+            </template>
+            <template #action>
+              <div class="flex items-center gap-2">
+                <span v-if="!isMobile" class="text-sm text-gray-400"
                   >{{ setData.animationSpeed }}x</span
                 >
-                <div class="w-40 flex justify-end">
-                  <template v-if="!isMobile"
-                    ><n-slider
-                      v-model:value="setData.animationSpeed"
-                      :min="0.1"
-                      :max="3"
-                      :step="0.1"
-                      :marks="{
-                        0.1: t('settings.basic.animationSpeed.slow'),
-                        1: t('settings.basic.animationSpeed.normal'),
-                        3: t('settings.basic.animationSpeed.fast')
-                      }"
-                      :disabled="setData.noAnimate"
-                  /></template>
-                  <template v-else>
-                    <n-input-number
-                      v-model:value="setData.animationSpeed"
-                      :min="0.1"
-                      :max="3"
-                      :step="0.1"
-                      :placeholder="t('settings.basic.animationSpeedPlaceholder')"
-                      :disabled="setData.noAnimate"
-                      button-placement="both"
-                      style="width: 100px"
-                    />
-                  </template>
+                <div class="w-40 max-md:w-auto flex justify-end">
+                  <n-slider
+                    v-if="!isMobile"
+                    v-model:value="setData.animationSpeed"
+                    :min="0.1"
+                    :max="3"
+                    :step="0.1"
+                    :marks="animationSpeedMarks"
+                    :disabled="setData.noAnimate"
+                  />
+                  <n-input-number
+                    v-else
+                    v-model:value="setData.animationSpeed"
+                    :min="0.1"
+                    :max="3"
+                    :step="0.1"
+                    :disabled="setData.noAnimate"
+                    button-placement="both"
+                    class="w-[100px]"
+                  />
                 </div>
               </div>
-            </div>
+            </template>
+          </setting-item>
 
-            <!-- GPU加速设置 -->
-            <div class="set-item" v-if="isElectron">
-              <div>
-                <div class="set-item-title">{{ t('settings.basic.gpuAcceleration') }}</div>
-                <div class="set-item-content">
-                  <div class="text-sm text-gray-500 mb-2">
-                    {{ t('settings.basic.gpuAccelerationDesc') }}
-                  </div>
-                  <div class="text-xs text-amber-500" v-if="gpuAccelerationChanged">
-                    <i class="ri-information-line mr-1"></i>
-                    {{ t('settings.basic.gpuAccelerationRestart') }}
-                  </div>
-                </div>
+          <!-- GPU加速 -->
+          <setting-item v-if="isElectron" :title="t('settings.basic.gpuAcceleration')">
+            <template #description>
+              <div class="text-sm text-gray-500 mb-2">
+                {{ t('settings.basic.gpuAccelerationDesc') }}
               </div>
-              <n-switch
-                v-model:value="setData.enableGpuAcceleration"
-                @update:value="handleGpuAccelerationChange"
-              >
-                <template #checked><i class="ri-cpu-line"></i></template>
-                <template #unchecked><i class="ri-cpu-line"></i></template>
-              </n-switch>
-            </div>
-          </div>
-        </div>
+              <div v-if="gpuAccelerationChanged" class="text-xs text-amber-500">
+                <i class="ri-information-line mr-1"></i>
+                {{ t('settings.basic.gpuAccelerationRestart') }}
+              </div>
+            </template>
+            <n-switch
+              v-model:value="setData.enableGpuAcceleration"
+              @update:value="handleGpuAccelerationChange"
+            >
+              <template #checked><i class="ri-cpu-line"></i></template>
+              <template #unchecked><i class="ri-cpu-line"></i></template>
+            </n-switch>
+          </setting-item>
+        </setting-section>
 
         <!-- 播放设置 -->
-        <div id="playback" ref="playbackRef" class="settings-section">
-          <div class="settings-section-title">{{ t('settings.sections.playback') }}</div>
-          <div class="settings-section-content">
-            <div>
-              <div class="set-item">
-                <div>
-                  <div class="set-item-title">{{ t('settings.playback.quality') }}</div>
-                  <div class="set-item-content">
-                    {{ t('settings.playback.qualityDesc') }}
-                  </div>
-                </div>
-                <n-select
-                  v-model:value="setData.musicQuality"
-                  :options="[
-                    { label: t('settings.playback.qualityOptions.standard'), value: 'standard' },
-                    { label: t('settings.playback.qualityOptions.higher'), value: 'higher' },
-                    { label: t('settings.playback.qualityOptions.exhigh'), value: 'exhigh' },
-                    { label: t('settings.playback.qualityOptions.lossless'), value: 'lossless' },
-                    { label: t('settings.playback.qualityOptions.hires'), value: 'hires' },
-                    { label: t('settings.playback.qualityOptions.jyeffect'), value: 'jyeffect' },
-                    { label: t('settings.playback.qualityOptions.sky'), value: 'sky' },
-                    { label: t('settings.playback.qualityOptions.dolby'), value: 'dolby' },
-                    { label: t('settings.playback.qualityOptions.jymaster'), value: 'jymaster' }
-                  ]"
-                  style="width: 160px"
-                />
-              </div>
-              <!-- 网易云 QQ 音乐 酷我 酷狗 会员购买链接 -->
-              <div class="p-2 bg-light-100 dark:bg-dark-100 rounded-lg mt-2">
-                <div>大家还是需要支持正版，本软件只做开源探讨</div>
-                <div class="mt-2">各大音乐会员购买链接</div>
-                <div class="flex gap-5 flex-wrap">
-                  <a
-                    class="text-green-400 hover:text-green-500"
-                    href="https://music.163.com/store/vip"
-                    target="_blank"
-                    >网易云音乐会员</a
-                  >
-                  <a
-                    class="text-green-400 hover:text-green-500"
-                    href="https://y.qq.com/portal/vipportal/"
-                    target="_blank"
-                    >QQ音乐会员</a
-                  >
-                  <a
-                    class="text-green-400 hover:text-green-500"
-                    href="https://vip.kugou.com/"
-                    target="_blank"
-                    >酷狗音乐会员</a
-                  >
-                </div>
-              </div>
-            </div>
-            <div class="set-item" v-if="isElectron">
-              <div>
-                <div class="set-item-title">{{ t('settings.playback.musicSources') }}</div>
-                <div class="set-item-content">
-                  <div class="flex items-center gap-2">
-                    <n-switch v-model:value="setData.enableMusicUnblock">
-                      <template #checked>{{ t('common.on') }}</template>
-                      <template #unchecked>{{ t('common.off') }}</template>
-                    </n-switch>
-                    <span>{{ t('settings.playback.musicUnblockEnableDesc') }}</span>
-                  </div>
-                  <div v-if="setData.enableMusicUnblock" class="mt-2">
-                    <div class="text-sm">
-                      <span class="text-gray-500">{{
-                        t('settings.playback.selectedMusicSources')
-                      }}</span>
-                      <span v-if="musicSources.length > 0" class="text-gray-400">
-                        {{ musicSources.join(', ') }}
-                      </span>
-                      <span v-else class="text-red-500 text-xs">
-                        {{ t('settings.playback.noMusicSources') }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <n-button
-                size="small"
-                :disabled="!setData.enableMusicUnblock"
-                @click="showMusicSourcesModal = true"
+        <setting-section
+          id="playback"
+          :title="t('settings.sections.playback')"
+          @ref="(el) => (sectionRefs.playback = el as HTMLElement | null)"
+        >
+          <!-- 音质设置 -->
+          <setting-item
+            :title="t('settings.playback.quality')"
+            :description="t('settings.playback.qualityDesc')"
+          >
+            <n-select
+              v-model:value="setData.musicQuality"
+              :options="qualityOptions"
+              class="w-40 max-md:w-full"
+            />
+          </setting-item>
+
+          <!-- 会员购买链接 -->
+          <div
+            class="p-3 max-md:p-2 bg-light-100 dark:bg-dark-100 rounded-lg text-sm max-md:text-xs"
+          >
+            <div>大家还是需要支持正版，本软件只做开源探讨</div>
+            <div class="mt-2">各大音乐会员购买链接</div>
+            <div class="flex gap-4 max-md:gap-2 flex-wrap mt-1">
+              <a
+                v-for="link in memberLinks"
+                :key="link.url"
+                class="text-green-400 hover:text-green-500"
+                :href="link.url"
+                target="_blank"
               >
-                {{ t('settings.playback.configureMusicSources') }}
-              </n-button>
-            </div>
-
-            <div class="set-item" v-if="platform === 'darwin'">
-              <div>
-                <div class="set-item-title">{{ t('settings.playback.showStatusBar') }}</div>
-                <div class="set-item-content">
-                  {{ t('settings.playback.showStatusBarContent') }}
-                </div>
-              </div>
-              <n-switch v-model:value="setData.showTopAction">
-                <template #checked>{{ t('common.on') }}</template>
-                <template #unchecked>{{ t('common.off') }}</template>
-              </n-switch>
-            </div>
-
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.playback.autoPlay') }}</div>
-                <div class="set-item-content">{{ t('settings.playback.autoPlayDesc') }}</div>
-              </div>
-              <n-switch v-model:value="setData.autoPlay">
-                <template #checked>{{ t('common.on') }}</template>
-                <template #unchecked>{{ t('common.off') }}</template>
-              </n-switch>
+                {{ link.name }}
+              </a>
             </div>
           </div>
-        </div>
+
+          <!-- 音源设置 -->
+          <setting-item v-if="isElectron" :title="t('settings.playback.musicSources')">
+            <template #description>
+              <div class="flex items-center gap-2">
+                <n-switch v-model:value="setData.enableMusicUnblock">
+                  <template #checked>{{ t('common.on') }}</template>
+                  <template #unchecked>{{ t('common.off') }}</template>
+                </n-switch>
+                <span>{{ t('settings.playback.musicUnblockEnableDesc') }}</span>
+              </div>
+              <div v-if="setData.enableMusicUnblock" class="mt-2 text-sm">
+                <span class="text-gray-500">{{ t('settings.playback.selectedMusicSources') }}</span>
+                <span v-if="musicSources.length > 0" class="text-gray-400">{{
+                  musicSources.join(', ')
+                }}</span>
+                <span v-else class="text-red-500 text-xs">{{
+                  t('settings.playback.noMusicSources')
+                }}</span>
+              </div>
+            </template>
+            <n-button
+              size="small"
+              :disabled="!setData.enableMusicUnblock"
+              @click="showMusicSourcesModal = true"
+            >
+              {{ t('settings.playback.configureMusicSources') }}
+            </n-button>
+          </setting-item>
+
+          <!-- 状态栏显示 -->
+          <setting-item
+            v-if="platform === 'darwin'"
+            :title="t('settings.playback.showStatusBar')"
+            :description="t('settings.playback.showStatusBarContent')"
+          >
+            <n-switch v-model:value="setData.showTopAction">
+              <template #checked>{{ t('common.on') }}</template>
+              <template #unchecked>{{ t('common.off') }}</template>
+            </n-switch>
+          </setting-item>
+
+          <!-- 自动播放 -->
+          <setting-item
+            :title="t('settings.playback.autoPlay')"
+            :description="t('settings.playback.autoPlayDesc')"
+          >
+            <n-switch v-model:value="setData.autoPlay">
+              <template #checked>{{ t('common.on') }}</template>
+              <template #unchecked>{{ t('common.off') }}</template>
+            </n-switch>
+          </setting-item>
+        </setting-section>
 
         <!-- 应用设置 -->
-        <div v-if="isElectron" id="application" ref="applicationRef" class="settings-section">
-          <div class="settings-section-title">{{ t('settings.sections.application') }}</div>
-          <div class="settings-section-content">
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.application.closeAction') }}</div>
-                <div class="set-item-content">{{ t('settings.application.closeActionDesc') }}</div>
-              </div>
-              <n-select
-                v-model:value="setData.closeAction"
-                :options="[
-                  { label: t('settings.application.closeOptions.ask'), value: 'ask' },
-                  { label: t('settings.application.closeOptions.minimize'), value: 'minimize' },
-                  { label: t('settings.application.closeOptions.close'), value: 'close' }
-                ]"
-                style="width: 160px"
-              />
-            </div>
+        <setting-section
+          v-if="isElectron"
+          id="application"
+          :title="t('settings.sections.application')"
+          @ref="(el) => (sectionRefs.application = el as HTMLElement | null)"
+        >
+          <!-- 关闭行为 -->
+          <setting-item
+            :title="t('settings.application.closeAction')"
+            :description="t('settings.application.closeActionDesc')"
+          >
+            <n-select
+              v-model:value="setData.closeAction"
+              :options="closeActionOptions"
+              class="w-40 max-md:w-full"
+            />
+          </setting-item>
 
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.application.shortcut') }}</div>
-                <div class="set-item-content">{{ t('settings.application.shortcutDesc') }}</div>
-              </div>
-              <n-button size="small" @click="showShortcutModal = true">{{
-                t('common.configure')
-              }}</n-button>
-            </div>
+          <!-- 快捷键 -->
+          <setting-item
+            :title="t('settings.application.shortcut')"
+            :description="t('settings.application.shortcutDesc')"
+          >
+            <n-button size="small" @click="showShortcutModal = true">{{
+              t('common.configure')
+            }}</n-button>
+          </setting-item>
 
-            <div v-if="isElectron" class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.application.download') }}</div>
-                <div class="set-item-content">
-                  <n-switch v-model:value="setData.alwaysShowDownloadButton" class="mr-2">
-                    <template #checked>{{ t('common.show') }}</template>
-                    <template #unchecked>{{ t('common.hide') }}</template>
-                  </n-switch>
-                  {{ t('settings.application.downloadDesc') }}
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <n-button size="small" @click="settingsStore.showDownloadDrawer = true">
-                  {{ t('settings.application.download') }}
-                </n-button>
-              </div>
-            </div>
+          <!-- 下载管理 -->
+          <setting-item v-if="isElectron" :title="t('settings.application.download')">
+            <template #description>
+              <n-switch v-model:value="setData.alwaysShowDownloadButton" class="mr-2">
+                <template #checked>{{ t('common.show') }}</template>
+                <template #unchecked>{{ t('common.hide') }}</template>
+              </n-switch>
+              {{ t('settings.application.downloadDesc') }}
+            </template>
+            <n-button size="small" @click="settingsStore.showDownloadDrawer = true">
+              {{ t('settings.application.download') }}
+            </n-button>
+          </setting-item>
 
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.application.unlimitedDownload') }}</div>
-                <div class="set-item-content">
-                  <n-switch v-model:value="setData.unlimitedDownload" class="mr-2">
-                    <template #checked>{{ t('common.on') }}</template>
-                    <template #unchecked>{{ t('common.off') }}</template>
-                  </n-switch>
-                  {{ t('settings.application.unlimitedDownloadDesc') }}
-                </div>
-              </div>
-            </div>
+          <!-- 无限下载 -->
+          <setting-item :title="t('settings.application.unlimitedDownload')">
+            <template #description>
+              <n-switch v-model:value="setData.unlimitedDownload" class="mr-2">
+                <template #checked>{{ t('common.on') }}</template>
+                <template #unchecked>{{ t('common.off') }}</template>
+              </n-switch>
+              {{ t('settings.application.unlimitedDownloadDesc') }}
+            </template>
+          </setting-item>
 
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.application.downloadPath') }}</div>
-                <div class="set-item-content">
-                  {{ setData.downloadPath || t('settings.application.downloadPathDesc') }}
-                </div>
-              </div>
+          <!-- 下载路径 -->
+          <setting-item :title="t('settings.application.downloadPath')">
+            <template #description>
+              <span class="break-all">{{
+                setData.downloadPath || t('settings.application.downloadPathDesc')
+              }}</span>
+            </template>
+            <template #action>
               <div class="flex items-center gap-2">
                 <n-button size="small" @click="openDownloadPath">{{ t('common.open') }}</n-button>
                 <n-button size="small" @click="selectDownloadPath">{{
                   t('common.modify')
                 }}</n-button>
               </div>
-            </div>
+            </template>
+          </setting-item>
 
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.application.remoteControl') }}</div>
-                <div class="set-item-content">
-                  {{ t('settings.application.remoteControlDesc') }}
-                </div>
-              </div>
-              <n-button size="small" @click="showRemoteControlModal = true">{{
-                t('common.configure')
-              }}</n-button>
-            </div>
-          </div>
-        </div>
+          <!-- 远程控制 -->
+          <setting-item
+            :title="t('settings.application.remoteControl')"
+            :description="t('settings.application.remoteControlDesc')"
+          >
+            <n-button size="small" @click="showRemoteControlModal = true">{{
+              t('common.configure')
+            }}</n-button>
+          </setting-item>
+        </setting-section>
 
         <!-- 网络设置 -->
-        <div v-if="isElectron" id="network" ref="networkRef" class="settings-section">
-          <div class="settings-section-title">{{ t('settings.sections.network') }}</div>
-          <div class="settings-section-content">
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.network.apiPort') }}</div>
-                <div class="set-item-content">{{ t('settings.network.apiPortDesc') }}</div>
-              </div>
-              <n-input-number v-model:value="setData.musicApiPort" />
-            </div>
+        <setting-section
+          v-if="isElectron"
+          id="network"
+          :title="t('settings.sections.network')"
+          @ref="(el) => (sectionRefs.network = el as HTMLElement | null)"
+        >
+          <!-- API端口 -->
+          <setting-item
+            :title="t('settings.network.apiPort')"
+            :description="t('settings.network.apiPortDesc')"
+          >
+            <n-input-number v-model:value="setData.musicApiPort" class="max-md:w-32" />
+          </setting-item>
 
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.network.proxy') }}</div>
-                <div class="set-item-content">{{ t('settings.network.proxyDesc') }}</div>
-              </div>
+          <!-- 代理设置 -->
+          <setting-item
+            :title="t('settings.network.proxy')"
+            :description="t('settings.network.proxyDesc')"
+          >
+            <template #action>
               <div class="flex items-center gap-2">
                 <n-switch v-model:value="setData.proxyConfig.enable">
                   <template #checked>{{ t('common.on') }}</template>
@@ -468,14 +421,16 @@
                   t('common.configure')
                 }}</n-button>
               </div>
-            </div>
+            </template>
+          </setting-item>
 
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.network.realIP') }}</div>
-                <div class="set-item-content">{{ t('settings.network.realIPDesc') }}</div>
-              </div>
-              <div class="flex items-center gap-2">
+          <!-- 真实IP -->
+          <setting-item
+            :title="t('settings.network.realIP')"
+            :description="t('settings.network.realIPDesc')"
+          >
+            <template #action>
+              <div class="flex items-center gap-2 max-md:flex-wrap">
                 <n-switch v-model:value="setData.enableRealIP">
                   <template #checked>{{ t('common.on') }}</template>
                   <template #unchecked>{{ t('common.off') }}</template>
@@ -484,57 +439,56 @@
                   v-if="setData.enableRealIP"
                   v-model:value="setData.realIP"
                   placeholder="realIP"
-                  style="width: 200px"
+                  class="w-[200px] max-md:w-full"
                   @blur="validateAndSaveRealIP"
                 />
               </div>
-            </div>
-          </div>
-        </div>
+            </template>
+          </setting-item>
+        </setting-section>
 
         <!-- 系统管理 -->
-        <div v-if="isElectron" id="system" ref="systemRef" class="settings-section">
-          <div class="settings-section-title">{{ t('settings.sections.system') }}</div>
-          <div class="settings-section-content">
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.system.cache') }}</div>
-                <div class="set-item-content">{{ t('settings.system.cacheDesc') }}</div>
-              </div>
-              <n-button size="small" @click="showClearCacheModal = true">
-                {{ t('settings.system.cacheDesc') }}
-              </n-button>
-            </div>
+        <setting-section
+          v-if="isElectron"
+          id="system"
+          :title="t('settings.sections.system')"
+          @ref="(el) => (sectionRefs.system = el as HTMLElement | null)"
+        >
+          <!-- 清除缓存 -->
+          <setting-item
+            :title="t('settings.system.cache')"
+            :description="t('settings.system.cacheDesc')"
+          >
+            <n-button size="small" @click="showClearCacheModal = true">{{
+              t('settings.system.cacheDesc')
+            }}</n-button>
+          </setting-item>
 
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.system.restart') }}</div>
-                <div class="set-item-content">{{ t('settings.system.restartDesc') }}</div>
-              </div>
-              <n-button size="small" @click="restartApp">{{
-                t('settings.system.restart')
-              }}</n-button>
-            </div>
-          </div>
-        </div>
+          <!-- 重启应用 -->
+          <setting-item
+            :title="t('settings.system.restart')"
+            :description="t('settings.system.restartDesc')"
+          >
+            <n-button size="small" @click="restartApp">{{ t('settings.system.restart') }}</n-button>
+          </setting-item>
+        </setting-section>
 
         <!-- 关于 -->
-        <div id="about" ref="aboutRef" class="settings-section">
-          <div class="settings-section-title">{{ t('settings.sections.about') }}</div>
-          <div class="settings-section-content">
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.about.version') }}</div>
-                <div class="set-item-content">
-                  {{ updateInfo.currentVersion }}
-                  <template v-if="updateInfo.hasUpdate">
-                    <n-tag type="success" class="ml-2">
-                      {{ t('settings.about.hasUpdate') }} {{ updateInfo.latestVersion }}
-                    </n-tag>
-                  </template>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
+        <setting-section
+          id="about"
+          :title="t('settings.sections.about')"
+          @ref="(el) => (sectionRefs.about = el as HTMLElement | null)"
+        >
+          <!-- 版本信息 -->
+          <setting-item :title="t('settings.about.version')">
+            <template #description>
+              {{ updateInfo.currentVersion }}
+              <n-tag v-if="updateInfo.hasUpdate" type="success" class="ml-2">
+                {{ t('settings.about.hasUpdate') }} {{ updateInfo.latestVersion }}
+              </n-tag>
+            </template>
+            <template #action>
+              <div class="flex items-center gap-2 flex-wrap">
                 <n-button size="small" :loading="checking" @click="checkForUpdates(true)">
                   {{ checking ? t('settings.about.checking') : t('settings.about.checkUpdate') }}
                 </n-button>
@@ -542,76 +496,62 @@
                   {{ t('settings.about.gotoUpdate') }}
                 </n-button>
               </div>
-            </div>
+            </template>
+          </setting-item>
 
-            <div
-              class="set-item cursor-pointer hover:text-green-500 hover:bg-green-950 transition-all"
-              @click="openAuthor"
-            >
-              <coffee>
-                <div>
-                  <div class="set-item-title">{{ t('settings.about.author') }}</div>
-                  <div class="set-item-content">{{ t('settings.about.authorDesc') }}</div>
-                </div>
-              </coffee>
-              <div>
-                <n-button size="small" @click="openAuthor">
-                  <i class="ri-github-line"></i>{{ t('settings.about.gotoGithub') }}
-                </n-button>
-              </div>
-            </div>
-          </div>
-        </div>
+          <!-- 作者信息 -->
+          <setting-item
+            :title="t('settings.about.author')"
+            :description="t('settings.about.authorDesc')"
+            clickable
+            @click="openAuthor"
+          >
+            <n-button size="small" @click.stop="openAuthor">
+              <i class="ri-github-line mr-1"></i>{{ t('settings.about.gotoGithub') }}
+            </n-button>
+          </setting-item>
+        </setting-section>
 
         <!-- 捐赠支持 -->
-        <div id="donation" ref="donationRef" class="settings-section">
-          <div class="settings-section-title">{{ t('settings.sections.donation') }}</div>
-          <div class="settings-section-content">
-            <div class="set-item">
-              <div>
-                <div class="set-item-title">{{ t('settings.sections.donation') }}</div>
-                <div class="set-item-content">{{ t('donation.message') }}</div>
-              </div>
-              <n-button text @click="toggleDonationList">
-                <template #icon>
-                  <i :class="isDonationListVisible ? 'ri-eye-line' : 'ri-eye-off-line'" />
-                </template>
-                {{ isDonationListVisible ? t('common.hide') : t('common.show') }}
-              </n-button>
-            </div>
-            <donation-list v-if="isDonationListVisible" />
-          </div>
-        </div>
+        <setting-section
+          id="donation"
+          :title="t('settings.sections.donation')"
+          @ref="(el) => (sectionRefs.donation = el as HTMLElement | null)"
+        >
+          <setting-item
+            :title="t('settings.sections.donation')"
+            :description="t('donation.message')"
+          >
+            <n-button text @click="toggleDonationList">
+              <template #icon>
+                <i :class="isDonationListVisible ? 'ri-eye-line' : 'ri-eye-off-line'" />
+              </template>
+              {{ isDonationListVisible ? t('common.hide') : t('common.show') }}
+            </n-button>
+          </setting-item>
+          <donation-list v-if="isDonationListVisible" />
+        </setting-section>
       </div>
       <play-bottom />
     </n-scrollbar>
 
+    <!-- 弹窗组件 -->
     <template v-if="isElectron">
-      <!-- 快捷键设置弹窗 -->
       <shortcut-settings v-model:show="showShortcutModal" @change="handleShortcutsChange" />
-
-      <!-- 代理设置弹窗 -->
       <proxy-settings
         v-model:show="showProxyModal"
         :config="proxyForm"
         @confirm="handleProxyConfirm"
       />
-
-      <!-- 音源设置弹窗 -->
       <music-source-settings v-model:show="showMusicSourcesModal" v-model:sources="musicSources" />
-
-      <!-- 远程控制设置弹窗 -->
       <remote-control-setting v-model:visible="showRemoteControlModal" />
     </template>
 
-    <!-- Cookie设置弹窗 -->
     <cookie-settings-modal
       v-model:show="showTokenModal"
       :initial-value="currentToken"
       @save="handleTokenSave"
     />
-
-    <!-- 清除缓存弹窗 -->
     <clear-cache-settings v-model:show="showClearCacheModal" @confirm="clearCache" />
   </div>
 </template>
@@ -619,12 +559,11 @@
 <script setup lang="ts">
 import { useDebounceFn } from '@vueuse/core';
 import { useMessage } from 'naive-ui';
-import { computed, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import localData from '@/../main/set.json';
 import { getUserDetail } from '@/api/login';
-import Coffee from '@/components/Coffee.vue';
 import DonationList from '@/components/common/DonationList.vue';
 import PlayBottom from '@/components/common/PlayBottom.vue';
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue';
@@ -642,33 +581,40 @@ import { openDirectory, selectDirectory } from '@/utils/fileOperation';
 import { checkUpdate, UpdateResult } from '@/utils/update';
 
 import config from '../../../../package.json';
+import SettingItem from './SettingItem.vue';
+import SettingNav from './SettingNav.vue';
+import SettingSection from './SettingSection.vue';
 
-// 所有平台默认值
+// ==================== 常量配置 ====================
 const ALL_PLATFORMS: Platform[] = ['migu', 'kugou', 'kuwo', 'pyncmd', 'bilibili'];
 
-const platform = window.electron ? window.electron.ipcRenderer.sendSync('get-platform') : 'web';
+const memberLinks = [
+  { name: '网易云音乐会员', url: 'https://music.163.com/store/vip' },
+  { name: 'QQ音乐会员', url: 'https://y.qq.com/portal/vipportal/' },
+  { name: '酷狗音乐会员', url: 'https://vip.kugou.com/' }
+];
 
+const fontPreviews = [
+  { key: 'chinese' },
+  { key: 'english' },
+  { key: 'japanese' },
+  { key: 'korean' }
+];
+
+// ==================== 平台和Store ====================
+const platform = window.electron ? window.electron.ipcRenderer.sendSync('get-platform') : 'web';
 const settingsStore = useSettingsStore();
 const userStore = useUserStore();
+const message = useMessage();
+const { t } = useI18n();
 
-/**
- * 防抖保存设置
- * 避免频繁写入导致性能问题
- */
+// ==================== 设置数据管理 ====================
 const saveSettings = useDebounceFn((data) => {
   settingsStore.setSetData(data);
 }, 500);
 
-/**
- * 本地缓存的设置数据
- * 使用本地副本避免直接操作 store,提升性能
- */
 const localSetData = ref({ ...settingsStore.setData });
 
-/**
- * 设置数据的计算属性
- * 提供响应式的读写接口
- */
 const setData = computed({
   get: () => localSetData.value,
   set: (newData) => {
@@ -676,26 +622,15 @@ const setData = computed({
   }
 });
 
-/**
- * 监听本地设置变化,自动保存
- * 使用防抖避免频繁保存
- */
 watch(
   () => localSetData.value,
-  (newValue) => {
-    saveSettings(newValue);
-  },
+  (newValue) => saveSettings(newValue),
   { deep: true }
 );
 
-/**
- * 监听 store 中设置的变化,同步到本地
- * 避免外部修改导致的数据不一致
- */
 watch(
   () => settingsStore.setData,
   (newValue) => {
-    // 只在数据不同时更新,避免循环触发
     if (JSON.stringify(localSetData.value) !== JSON.stringify(newValue)) {
       localSetData.value = { ...newValue };
     }
@@ -703,26 +638,41 @@ watch(
   { deep: true, immediate: true }
 );
 
-/**
- * 组件卸载时确保设置已保存
- */
 onUnmounted(() => {
   settingsStore.setSetData(localSetData.value);
 });
 
-// ==================== 更新检查相关 ====================
-const checking = ref(false);
-const updateInfo = ref<UpdateResult>({
-  hasUpdate: false,
-  latestVersion: '',
-  currentVersion: config.version,
-  releaseInfo: null
-});
+// ==================== 选项配置 ====================
+const translationEngineOptions = computed(() => [
+  { label: t('settings.translationEngineOptions.none'), value: 'none' },
+  { label: t('settings.translationEngineOptions.opencc'), value: 'opencc' }
+]);
 
-// ==================== i18n ====================
-const { t } = useI18n();
+const qualityOptions = computed(() => [
+  { label: t('settings.playback.qualityOptions.standard'), value: 'standard' },
+  { label: t('settings.playback.qualityOptions.higher'), value: 'higher' },
+  { label: t('settings.playback.qualityOptions.exhigh'), value: 'exhigh' },
+  { label: t('settings.playback.qualityOptions.lossless'), value: 'lossless' },
+  { label: t('settings.playback.qualityOptions.hires'), value: 'hires' },
+  { label: t('settings.playback.qualityOptions.jyeffect'), value: 'jyeffect' },
+  { label: t('settings.playback.qualityOptions.sky'), value: 'sky' },
+  { label: t('settings.playback.qualityOptions.dolby'), value: 'dolby' },
+  { label: t('settings.playback.qualityOptions.jymaster'), value: 'jymaster' }
+]);
 
-// ==================== 主题和界面设置 ====================
+const closeActionOptions = computed(() => [
+  { label: t('settings.application.closeOptions.ask'), value: 'ask' },
+  { label: t('settings.application.closeOptions.minimize'), value: 'minimize' },
+  { label: t('settings.application.closeOptions.close'), value: 'close' }
+]);
+
+const animationSpeedMarks = computed(() => ({
+  0.1: t('settings.basic.animationSpeed.slow'),
+  1: t('settings.basic.animationSpeed.normal'),
+  3: t('settings.basic.animationSpeed.fast')
+}));
+
+// ==================== 主题设置 ====================
 const isDarkTheme = computed({
   get: () => settingsStore.theme === 'dark',
   set: () => settingsStore.toggleTheme()
@@ -732,26 +682,15 @@ const handleAutoThemeChange = (value: boolean) => {
   settingsStore.setAutoTheme(value);
 };
 
-// GPU加速相关
+// ==================== GPU加速 ====================
 const gpuAccelerationChanged = ref(false);
 
-/**
- * 处理GPU加速设置变更
- * 在非Electron环境下，直接更新配置
- * 在Electron环境下，通过IPC通信更新主进程配置并提示重启
- */
 const handleGpuAccelerationChange = (enabled: boolean) => {
   try {
     if (window.electron) {
-      // Electron环境：通过IPC更新主进程配置
       window.electron.ipcRenderer.send('update-gpu-acceleration', enabled);
       gpuAccelerationChanged.value = true;
-
-      // 显示重启提示
       message.info(t('settings.basic.gpuAccelerationChangeSuccess'));
-    } else {
-      // 非Electron环境：直接更新本地配置
-      console.log('GPU加速设置在Web环境下不生效');
     }
   } catch (error) {
     console.error('GPU加速设置更新失败:', error);
@@ -759,14 +698,15 @@ const handleGpuAccelerationChange = (enabled: boolean) => {
   }
 };
 
-const openAuthor = () => {
-  window.open(setData.value.authorUrl);
-};
+// ==================== 更新检查 ====================
+const checking = ref(false);
+const updateInfo = ref<UpdateResult>({
+  hasUpdate: false,
+  latestVersion: '',
+  currentVersion: config.version,
+  releaseInfo: null
+});
 
-const restartApp = () => {
-  window.electron.ipcRenderer.send('restart');
-};
-const message = useMessage();
 const checkForUpdates = async (isClick = false) => {
   checking.value = true;
   try {
@@ -793,13 +733,19 @@ const openReleasePage = () => {
   settingsStore.showUpdateModal = true;
 };
 
+const openAuthor = () => {
+  window.open(setData.value.authorUrl);
+};
+
+const restartApp = () => {
+  window.electron.ipcRenderer.send('restart');
+};
+
+// ==================== 下载路径 ====================
 const selectDownloadPath = async () => {
   const path = await selectDirectory(message);
   if (path) {
-    setData.value = {
-      ...setData.value,
-      downloadPath: path
-    };
+    setData.value = { ...setData.value, downloadPath: path };
   }
 };
 
@@ -807,91 +753,10 @@ const openDownloadPath = () => {
   openDirectory(setData.value.downloadPath, message);
 };
 
+// ==================== 代理设置 ====================
 const showProxyModal = ref(false);
-const proxyForm = ref({
-  protocol: 'http',
-  host: '127.0.0.1',
-  port: 7890
-});
+const proxyForm = ref({ protocol: 'http', host: '127.0.0.1', port: 7890 });
 
-// 使用 store 中的字体列表
-const systemFonts = computed(() => settingsStore.systemFonts);
-
-// 已选择的字体列表
-const selectedFonts = ref<string[]>([]);
-
-// 自定义渲染函数
-const renderFontLabel = (option: { label: string; value: string }) => {
-  return h('span', { style: { fontFamily: option.value } }, option.label);
-};
-
-// 监听字体选择变化
-watch(
-  selectedFonts,
-  (newFonts) => {
-    // 如果没有选择任何字体，使用系统默认字体
-    if (newFonts.length === 0) {
-      setData.value = {
-        ...setData.value,
-        fontFamily: 'system-ui'
-      };
-      return;
-    }
-    // 将选择的字体组合成字体列表
-    setData.value = {
-      ...setData.value,
-      fontFamily: newFonts.join(',')
-    };
-  },
-  { deep: true }
-);
-
-// 初始化已选择的字体
-watch(
-  () => setData.value.fontFamily,
-  (newFont) => {
-    if (newFont) {
-      if (newFont === 'system-ui') {
-        selectedFonts.value = [];
-      } else {
-        selectedFonts.value = newFont.split(',');
-      }
-    }
-  },
-  { immediate: true }
-);
-
-// 初始化时从store获取配置
-onMounted(async () => {
-  checkForUpdates();
-  if (setData.value.proxyConfig) {
-    proxyForm.value = { ...setData.value.proxyConfig };
-  }
-  // 确保enableRealIP有默认值
-  if (setData.value.enableRealIP === undefined) {
-    setData.value = {
-      ...setData.value,
-      enableRealIP: false
-    };
-  }
-
-  // 监听GPU加速设置更新事件
-  if (window.electron) {
-    // 监听更新成功事件
-    window.electron.ipcRenderer.on('gpu-acceleration-updated', (_, enabled: boolean) => {
-      console.log('GPU加速设置已更新:', enabled);
-      gpuAccelerationChanged.value = true;
-    });
-
-    // 监听更新错误事件
-    window.electron.ipcRenderer.on('gpu-acceleration-update-error', (_, errorMessage: string) => {
-      console.error('GPU加速设置更新错误:', errorMessage);
-      gpuAccelerationChanged.value = false;
-    });
-  }
-});
-
-// 监听代理配置变化
 watch(
   () => setData.value.proxyConfig,
   (newVal) => {
@@ -906,14 +771,10 @@ watch(
   { immediate: true, deep: true }
 );
 
-const handleProxyConfirm = async (proxyConfig) => {
-  // 保存代理配置时保留enable状态
+const handleProxyConfirm = async (proxyConfig: any) => {
   setData.value = {
     ...setData.value,
-    proxyConfig: {
-      enable: setData.value.proxyConfig?.enable || false,
-      ...proxyConfig
-    }
+    proxyConfig: { enable: setData.value.proxyConfig?.enable || false, ...proxyConfig }
   };
   message.success(t('settings.network.messages.proxySuccess'));
 };
@@ -921,37 +782,55 @@ const handleProxyConfirm = async (proxyConfig) => {
 const validateAndSaveRealIP = () => {
   const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
   if (!setData.value.realIP || ipRegex.test(setData.value.realIP)) {
-    setData.value = {
-      ...setData.value,
-      realIP: setData.value.realIP,
-      enableRealIP: true
-    };
+    setData.value = { ...setData.value, realIP: setData.value.realIP, enableRealIP: true };
     if (setData.value.realIP) {
       message.success(t('settings.network.messages.realIPSuccess'));
     }
   } else {
     message.error(t('settings.network.messages.realIPError'));
-    setData.value = {
-      ...setData.value,
-      realIP: ''
-    };
+    setData.value = { ...setData.value, realIP: '' };
   }
 };
 
-// 监听enableRealIP变化，当关闭时清空realIP
 watch(
   () => setData.value.enableRealIP,
   (newVal) => {
     if (!newVal) {
-      setData.value = {
-        ...setData.value,
-        realIP: '',
-        enableRealIP: false
-      };
+      setData.value = { ...setData.value, realIP: '', enableRealIP: false };
     }
   }
 );
 
+// ==================== 字体设置 ====================
+const systemFonts = computed(() => settingsStore.systemFonts);
+const selectedFonts = ref<string[]>([]);
+
+const renderFontLabel = (option: { label: string; value: string }) => {
+  return h('span', { style: { fontFamily: option.value } }, option.label);
+};
+
+watch(
+  selectedFonts,
+  (newFonts) => {
+    setData.value = {
+      ...setData.value,
+      fontFamily: newFonts.length === 0 ? 'system-ui' : newFonts.join(',')
+    };
+  },
+  { deep: true }
+);
+
+watch(
+  () => setData.value.fontFamily,
+  (newFont) => {
+    if (newFont) {
+      selectedFonts.value = newFont === 'system-ui' ? [] : newFont.split(',');
+    }
+  },
+  { immediate: true }
+);
+
+// ==================== 捐赠列表 ====================
 const isDonationListVisible = ref(localStorage.getItem('donationListVisible') !== 'false');
 
 const toggleDonationList = () => {
@@ -959,10 +838,19 @@ const toggleDonationList = () => {
   localStorage.setItem('donationListVisible', isDonationListVisible.value.toString());
 };
 
-// 清除缓存相关
+// ==================== 弹窗控制 ====================
 const showClearCacheModal = ref(false);
+const showShortcutModal = ref(false);
+const showMusicSourcesModal = ref(false);
+const showRemoteControlModal = ref(false);
+const showTokenModal = ref(false);
 
-const clearCache = async (selectedCacheTypes) => {
+const handleShortcutsChange = (shortcuts: any) => {
+  console.log('快捷键已更新:', shortcuts);
+};
+
+// ==================== 缓存清理 ====================
+const clearCache = async (selectedCacheTypes: string[]) => {
   const clearTasks = selectedCacheTypes.map(async (type) => {
     switch (type) {
       case 'history':
@@ -990,23 +878,16 @@ const clearCache = async (selectedCacheTypes) => {
         }
         break;
       case 'resources':
-        // 清除音频资源缓存
         if (window.electron) {
           window.electron.ipcRenderer.send('clear-audio-cache');
         }
-        // 清除歌词缓存
         localStorage.removeItem('lyricCache');
-        // 清除音乐URL缓存
         localStorage.removeItem('musicUrlCache');
-        // 清除图片缓存
         if (window.caches) {
           try {
             const cache = await window.caches.open('music-images');
-            await cache.keys().then((keys) => {
-              keys.forEach((key) => {
-                cache.delete(key);
-              });
-            });
+            const keys = await cache.keys();
+            keys.forEach((key) => cache.delete(key));
           } catch (error) {
             console.error('清除图片缓存失败:', error);
           }
@@ -1015,114 +896,124 @@ const clearCache = async (selectedCacheTypes) => {
       case 'lyrics':
         window.api.invoke('clear-lyrics-cache');
         break;
-      default:
-        break;
     }
   });
-
   await Promise.all(clearTasks);
   message.success(t('settings.system.messages.clearSuccess'));
 };
 
-const showShortcutModal = ref(false);
+// ==================== Token管理 ====================
+const currentToken = ref(localStorage.getItem('token') || '');
 
-const handleShortcutsChange = (shortcuts: any) => {
-  console.log('快捷键已更新:', shortcuts);
-};
+const handleTokenSave = async (token: string) => {
+  try {
+    const originalToken = localStorage.getItem('token');
+    localStorage.setItem('token', token);
 
-/**
- * 设置分类配置
- * 定义左侧导航的所有分类项
- */
-interface SettingSection {
-  id: string;
-  title?: string; // 可选,在模板中动态获取 i18n 标题
-  electron?: boolean;
-}
-
-const settingSections = computed<SettingSection[]>(() => {
-  const sections: SettingSection[] = [
-    { id: 'basic' },
-    { id: 'playback' },
-    { id: 'application', electron: true },
-    { id: 'network', electron: true },
-    { id: 'system', electron: true },
-    { id: 'about' },
-    { id: 'donation' }
-  ];
-
-  // 过滤非 Electron 环境下的专属分类
-  return sections.filter((section) => !section.electron || isElectron);
-});
-
-// 当前激活的分类
-const currentSection = ref('basic');
-const scrollbarRef = ref();
-
-// 各个分类的ref
-const basicRef = ref();
-const playbackRef = ref();
-const applicationRef = ref();
-const networkRef = ref();
-const systemRef = ref();
-const aboutRef = ref();
-const donationRef = ref();
-
-/**
- * Section refs 映射表
- * 用于滚动定位和状态追踪
- */
-const SECTION_REFS_MAP = computed(() => ({
-  basic: basicRef,
-  playback: playbackRef,
-  application: applicationRef,
-  network: networkRef,
-  system: systemRef,
-  about: aboutRef,
-  donation: donationRef
-}));
-
-/**
- * 滚动到指定分类
- * @param sectionId - 分类 ID
- */
-const scrollToSection = async (sectionId: string) => {
-  currentSection.value = sectionId;
-  const sectionRef = SECTION_REFS_MAP.value[sectionId];
-
-  if (sectionRef?.value) {
-    await nextTick();
-    scrollbarRef.value?.scrollTo({
-      top: sectionRef.value.offsetTop - 20,
-      behavior: 'smooth'
-    });
+    const user = await getUserDetail();
+    if (user.data && user.data.profile) {
+      userStore.setUser(user.data.profile);
+      currentToken.value = token;
+      message.success(t('settings.cookie.message.saveSuccess'));
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      if (originalToken) localStorage.setItem('token', originalToken);
+      else localStorage.removeItem('token');
+      message.error(t('settings.cookie.message.saveError'));
+    }
+  } catch {
+    const originalToken = localStorage.getItem('token');
+    if (originalToken) localStorage.setItem('token', originalToken);
+    else localStorage.removeItem('token');
+    message.error(t('settings.cookie.message.saveError'));
   }
 };
 
-/**
- * 滚动偏移阈值(px)
- * 用于判断当前激活的分类
- */
+const clearToken = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  currentToken.value = '';
+  userStore.user = null;
+  message.success(t('settings.basic.clearToken') + '成功');
+  setTimeout(() => window.location.reload(), 1000);
+};
+
+watch(
+  () => localStorage.getItem('token'),
+  (newToken) => {
+    currentToken.value = newToken || '';
+  },
+  { immediate: true }
+);
+
+// ==================== 音源设置 ====================
+const musicSources = computed({
+  get: () => {
+    if (!setData.value.enabledMusicSources) return ALL_PLATFORMS;
+    return setData.value.enabledMusicSources as Platform[];
+  },
+  set: (newValue: Platform[]) => {
+    const valuesToSet = newValue.length > 0 ? [...new Set(newValue)] : ALL_PLATFORMS;
+    setData.value = { ...setData.value, enabledMusicSources: valuesToSet };
+  }
+});
+
+// ==================== 导航相关 ====================
+interface SettingSectionConfig {
+  id: string;
+  electron?: boolean;
+}
+
+const settingSections: SettingSectionConfig[] = [
+  { id: 'basic' },
+  { id: 'playback' },
+  { id: 'application', electron: true },
+  { id: 'network', electron: true },
+  { id: 'system', electron: true },
+  { id: 'about' },
+  { id: 'donation' }
+];
+
+const navSections = computed(() => {
+  return settingSections
+    .filter((section) => !section.electron || isElectron)
+    .map((section) => ({
+      id: section.id,
+      title: t(`settings.sections.${section.id}`)
+    }));
+});
+
+const currentSection = ref('basic');
+const scrollbarRef = ref();
+const sectionRefs = reactive<Record<string, HTMLElement | null>>({
+  basic: null,
+  playback: null,
+  application: null,
+  network: null,
+  system: null,
+  about: null,
+  donation: null
+});
+
+const scrollToSection = async (sectionId: string) => {
+  currentSection.value = sectionId;
+  const sectionEl = sectionRefs[sectionId];
+  if (sectionEl) {
+    await nextTick();
+    scrollbarRef.value?.scrollTo({ top: sectionEl.offsetTop - 20, behavior: 'smooth' });
+  }
+};
+
 const SCROLL_OFFSET_THRESHOLD = 100;
 
-/**
- * 处理滚动事件，更新当前激活的分类
- * 根据滚动位置自动高亮左侧导航
- */
 const handleScroll = (e: any) => {
   const { scrollTop } = e.target;
+  let lastValidSection = 'basic';
 
-  const sections = Object.entries(SECTION_REFS_MAP.value).map(([id, ref]) => ({
-    id,
-    ref
-  }));
-
-  let lastValidSection = sections[0]?.id || 'basic';
-
-  for (const section of sections) {
-    if (section.ref?.value) {
-      const { offsetTop } = section.ref.value;
-      if (scrollTop >= offsetTop - SCROLL_OFFSET_THRESHOLD) {
+  for (const section of settingSections) {
+    if (!section.electron || isElectron) {
+      const el = sectionRefs[section.id];
+      if (el && scrollTop >= el.offsetTop - SCROLL_OFFSET_THRESHOLD) {
         lastValidSection = section.id;
       }
     }
@@ -1133,210 +1024,39 @@ const handleScroll = (e: any) => {
   }
 };
 
-// 初始化时设置当前激活的分类
-onMounted(() => {
-  // 延迟一帧等待 DOM 完全渲染
-  nextTick(() => {
-    handleScroll({ target: { scrollTop: 0 } });
-  });
-});
-
-// 音源设置相关
-const musicSources = computed({
-  get: () => {
-    if (!setData.value.enabledMusicSources) {
-      return ALL_PLATFORMS;
-    }
-    return setData.value.enabledMusicSources as Platform[];
-  },
-  set: (newValue: Platform[]) => {
-    // 确保至少选择一个音源
-    const valuesToSet = newValue.length > 0 ? [...new Set(newValue)] : ALL_PLATFORMS;
-    setData.value = {
-      ...setData.value,
-      enabledMusicSources: valuesToSet
-    };
+// ==================== 初始化 ====================
+onMounted(async () => {
+  checkForUpdates();
+  if (setData.value.proxyConfig) {
+    proxyForm.value = { ...setData.value.proxyConfig };
   }
-});
-
-const showMusicSourcesModal = ref(false);
-
-// 远程控制设置弹窗
-const showRemoteControlModal = ref(false);
-
-// Token管理相关
-const showTokenModal = ref(false);
-const currentToken = ref(localStorage.getItem('token') || '');
-
-// 处理Token保存
-const handleTokenSave = async (token: string) => {
-  try {
-    // 临时保存原有token
-    const originalToken = localStorage.getItem('token');
-
-    // 设置新token
-    localStorage.setItem('token', token);
-
-    // 验证token有效性
-    const user = await getUserDetail();
-    if (user.data && user.data.profile) {
-      // token有效，更新用户信息
-      userStore.setUser(user.data.profile);
-      currentToken.value = token;
-      message.success(t('settings.cookie.message.saveSuccess'));
-
-      // 刷新当前页面
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } else {
-      // token无效，恢复原有token
-      if (originalToken) {
-        localStorage.setItem('token', originalToken);
-      } else {
-        localStorage.removeItem('token');
-      }
-      message.error(t('settings.cookie.message.saveError'));
-    }
-  } catch (error) {
-    // token无效，恢复原有token
-    const originalToken = localStorage.getItem('token');
-    if (originalToken) {
-      localStorage.setItem('token', originalToken);
-    } else {
-      localStorage.removeItem('token');
-    }
-    message.error(t('settings.cookie.message.saveError'));
-    console.error('Token验证失败:', error);
+  if (setData.value.enableRealIP === undefined) {
+    setData.value = { ...setData.value, enableRealIP: false };
   }
-};
 
-// 清除Token
-const clearToken = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  currentToken.value = '';
-  userStore.user = null;
-  message.success(t('settings.basic.clearToken') + '成功');
+  if (window.electron) {
+    window.electron.ipcRenderer.on('gpu-acceleration-updated', (_, enabled: boolean) => {
+      console.log('GPU加速设置已更新:', enabled);
+      gpuAccelerationChanged.value = true;
+    });
 
-  // 刷新页面
-  setTimeout(() => {
-    window.location.reload();
-  }, 1000);
-};
+    window.electron.ipcRenderer.on('gpu-acceleration-update-error', (_, errorMessage: string) => {
+      console.error('GPU加速设置更新错误:', errorMessage);
+      gpuAccelerationChanged.value = false;
+    });
+  }
 
-// 监听localStorage中token的变化
-watch(
-  () => localStorage.getItem('token'),
-  (newToken) => {
-    currentToken.value = newToken || '';
-  },
-  { immediate: true }
-);
+  await nextTick();
+  handleScroll({ target: { scrollTop: 0 } });
+});
 </script>
 
 <style lang="scss" scoped>
-.settings-container {
-  @apply flex h-full;
-}
-
-.settings-nav {
-  @apply w-32 h-full flex-shrink-0 border-r border-gray-200 dark:border-gray-700;
-  @apply bg-light dark:bg-dark;
-
-  .nav-item {
-    @apply px-4 py-2.5 cursor-pointer text-sm;
-    @apply text-gray-600 dark:text-gray-400;
-    @apply transition-colors duration-200;
-    @apply border-l-2 border-transparent;
-
-    &:hover {
-      @apply text-primary dark:text-white bg-gray-50 dark:bg-dark-100;
-      @apply border-l-2 border-gray-200 dark:border-gray-200;
-    }
-
-    &.active {
-      @apply text-primary dark:text-white bg-gray-50 dark:bg-dark-100;
-      @apply border-l-2 border-gray-200 dark:border-gray-200;
-      @apply font-medium;
-    }
-  }
-}
-
-.settings-content {
-  @apply flex-1 h-full;
-}
-
-.set-page {
-  @apply p-4 pb-20;
-}
-
-.settings-section {
-  @apply mb-6 scroll-mt-4;
-
-  &-title {
-    @apply text-base font-medium mb-4;
-    @apply text-gray-600 dark:text-white;
-  }
-
-  &-content {
-    @apply space-y-4;
-  }
-}
-
-.set-item {
-  @apply flex items-center justify-between p-4 rounded-lg transition-all;
-  @apply bg-light dark:bg-dark text-gray-900 dark:text-white;
-  @apply border border-gray-200 dark:border-gray-700;
-
-  &-title {
-    @apply text-base font-medium mb-1;
-  }
-
-  &-content {
-    @apply text-sm text-gray-500 dark:text-gray-400;
-  }
-
-  &:hover {
-    @apply bg-gray-50 dark:bg-gray-800;
-  }
-
-  &.cursor-pointer:hover {
-    @apply text-green-500 bg-green-50 dark:bg-green-900;
-  }
-}
-
-.font-preview-container {
-  @apply mt-4 p-4 rounded-lg;
-  @apply bg-gray-50 dark:bg-dark-100;
-  @apply border border-gray-200 dark:border-gray-700;
-
-  .font-preview-title {
-    @apply text-sm font-medium mb-3;
-    @apply text-gray-600 dark:text-gray-300;
-  }
-
-  .font-preview {
-    @apply space-y-3;
-
-    .preview-item {
-      @apply flex flex-col gap-1;
-
-      .preview-label {
-        @apply text-xs text-gray-500 dark:text-gray-400;
-      }
-
-      .preview-text {
-        @apply text-base text-gray-900 dark:text-gray-100;
-        @apply p-2 rounded;
-        @apply bg-white dark:bg-dark;
-        @apply border border-gray-200 dark:border-gray-700;
-      }
-    }
-  }
-}
-
 :deep(.n-select) {
-  width: 200px;
+  min-width: 120px;
+}
+
+:deep(.n-input-number) {
+  max-width: 140px;
 }
 </style>
