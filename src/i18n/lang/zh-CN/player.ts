@@ -105,6 +105,11 @@ export default {
       custom: '自定义'
     }
   },
+  // 播放器设置
+  settings: {
+    title: '播放设置',
+    playbackSpeed: '播放速度'
+  },
   // 定时关闭功能相关
   sleepTimer: {
     title: '定时关闭',

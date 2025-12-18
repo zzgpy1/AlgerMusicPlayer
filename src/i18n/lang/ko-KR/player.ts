@@ -106,6 +106,11 @@ export default {
       custom: '사용자 정의'
     }
   },
+  // 플레이어 설정
+  settings: {
+    title: '재생 설정',
+    playbackSpeed: '재생 속도'
+  },
   sleepTimer: {
     title: '타이머 종료',
     cancel: '타이머 취소',

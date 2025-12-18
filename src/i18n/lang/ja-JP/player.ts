@@ -106,6 +106,11 @@ export default {
       custom: 'カスタム'
     }
   },
+  // プレイヤー設定
+  settings: {
+    title: '再生設定',
+    playbackSpeed: '再生速度'
+  },
   // タイマー機能関連
   sleepTimer: {
     title: 'スリープタイマー',

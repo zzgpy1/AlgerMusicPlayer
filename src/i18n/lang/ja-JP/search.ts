@@ -11,7 +11,8 @@ export default {
   },
   loading: {
     more: '読み込み中...',
-    failed: '検索に失敗しました'
+    failed: '検索に失敗しました',
+    searching: '検索中...'
   },
   noMore: 'これ以上ありません',
   error: {
@@ -23,5 +24,8 @@ export default {
     playlist: 'プレイリスト',
     mv: 'MV',
     bilibili: 'Bilibili'
-  }
+  },
+  history: '検索履歴',
+  hot: '人気検索',
+  suggestions: '検索候補'
 };

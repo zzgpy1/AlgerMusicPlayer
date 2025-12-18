@@ -11,7 +11,8 @@ export default {
   },
   loading: {
     more: '載入中...',
-    failed: '搜尋失敗'
+    failed: '搜尋失敗',
+    searching: '搜尋中...'
   },
   noMore: '沒有更多了',
   error: {
@@ -23,5 +24,8 @@ export default {
     playlist: '歌單',
     mv: 'MV',
     bilibili: 'B站'
-  }
+  },
+  history: '搜尋歷史',
+  hot: '熱門搜尋',
+  suggestions: '搜尋建議'
 };

@@ -11,7 +11,8 @@ export default {
   },
   loading: {
     more: '로딩 중...',
-    failed: '검색 실패'
+    failed: '검색 실패',
+    searching: '검색 중...'
   },
   noMore: '더 이상 없음',
   error: {
@@ -23,5 +24,8 @@ export default {
     playlist: '플레이리스트',
     mv: 'MV',
     bilibili: 'B站'
-  }
+  },
+  history: '검색 기록',
+  hot: '인기 검색',
+  suggestions: '검색 제안'
 };

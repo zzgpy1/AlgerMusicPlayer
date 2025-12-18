@@ -105,6 +105,11 @@ export default {
       custom: 'Custom'
     }
   },
+  // Playback settings
+  settings: {
+    title: 'Playback Settings',
+    playbackSpeed: 'Playback Speed'
+  },
   // Sleep timer related
   sleepTimer: {
     title: 'Sleep Timer',
@@ -125,7 +130,10 @@ export default {
     timerEnded: 'Sleep timer ended',
     playbackStopped: 'Music playback stopped',
     minutesRemaining: '{minutes} min remaining',
-    songsRemaining: '{count} songs remaining'
+    songsRemaining: '{count} songs remaining',
+    activeTime: 'Timer Active',
+    activeSongs: 'Counting Songs',
+    activeEnd: 'End After List'
   },
   playList: {
     clearAll: 'Clear Playlist',
