@@ -139,37 +139,49 @@ export const usePlaylistStore = defineStore(
      * 应用随机播放
      */
     const shufflePlayList = () => {
-      if (playList.value.length <= 1) return;
+      console.log('[PlaylistStore] shufflePlayList called');
+      if (playList.value.length === 0) return;
 
-      // 保存原始播放列表
+      // 保存原始列表
       if (originalPlayList.value.length === 0) {
+        console.log('[PlaylistStore] Saving original list, length:', playList.value.length);
         originalPlayList.value = [...playList.value];
       }
 
       const currentSong = playList.value[playListIndex.value];
-      const shuffledList = performShuffle(playList.value, currentSong);
+      console.log('[PlaylistStore] Current song before shuffle:', currentSong?.name);
 
-      playList.value = shuffledList;
+      // 执行洗牌
+      const shuffled = performShuffle([...playList.value], currentSong);
+      // 确保触发 shallowRef 的响应式
+      playList.value = [...shuffled];
       playListIndex.value = 0;
-      // pinia-plugin-persistedstate 会自动保存状态
+
+      console.log('[PlaylistStore] List shuffled, new length:', playList.value.length);
+      console.log('[PlaylistStore] New first song:', playList.value[0]?.name);
     };
 
     /**
      * 恢复原始播放列表顺序
      */
     const restoreOriginalOrder = () => {
+      console.log('[PlaylistStore] restoreOriginalOrder called');
       if (originalPlayList.value.length === 0) return;
 
-      const playerCore = usePlayerCoreStore();
-      const { playMusic } = storeToRefs(playerCore);
-      const currentSong = playMusic.value;
-      const originalIndex = originalPlayList.value.findIndex((song) => song.id === currentSong.id);
+      const currentSong = playList.value[playListIndex.value];
+      console.log('[PlaylistStore] Current song before restore:', currentSong?.name);
 
       playList.value = [...originalPlayList.value];
-      playListIndex.value = Math.max(0, originalIndex);
-
       originalPlayList.value = [];
-      // pinia-plugin-persistedstate 会自动保存状态
+
+      // 找到当前歌曲在原始列表中的索引
+      if (currentSong) {
+        const index = playList.value.findIndex((s) => s.id === currentSong.id);
+        if (index !== -1) {
+          playListIndex.value = index;
+        }
+      }
+      console.log('[PlaylistStore] Original order restored, new index:', playListIndex.value);
     };
 
     /**
@@ -303,21 +315,22 @@ export const usePlaylistStore = defineStore(
     const togglePlayMode = async () => {
       const { useUserStore } = await import('./user');
       const userStore = useUserStore();
-      const wasIntelligence = playMode.value === 3;
-      const newMode = (playMode.value + 1) % 4;
       const wasRandom = playMode.value === 2;
+      const wasIntelligence = playMode.value === 3;
+
+      let newMode = (playMode.value + 1) % 4;
+
+      // 如果要切换到心动模式，但用户未使用cookie登录，则跳过
+      if (newMode === 3 && (!userStore.user || userStore.loginType !== 'cookie')) {
+        console.log('跳过心动模式：需要cookie登录');
+        newMode = 0;
+      }
+
       const isRandom = newMode === 2;
       const isIntelligence = newMode === 3;
 
-      // 如果要切换到心动模式，但用户未使用cookie登录，则跳过
-      if (isIntelligence && (!userStore.user || userStore.loginType !== 'cookie')) {
-        console.log('跳过心动模式：需要cookie登录');
-        playMode.value = 0;
-        return;
-      }
-
+      console.log(`[PlaylistStore] togglePlayMode: ${playMode.value} -> ${newMode}`);
       playMode.value = newMode;
-      // pinia-plugin-persistedstate 会自动保存状态
 
       // 切换到随机模式时洗牌
       if (isRandom && !wasRandom && playList.value.length > 0) {
@@ -326,7 +339,7 @@ export const usePlaylistStore = defineStore(
       }
 
       // 从随机模式切换出去时恢复原始顺序
-      if (!isRandom && wasRandom && !isIntelligence) {
+      if (!isRandom && wasRandom) {
         restoreOriginalOrder();
         console.log('切换出随机模式，恢复原始顺序');
       }
@@ -385,6 +398,7 @@ export const usePlaylistStore = defineStore(
         console.log(
           `[nextPlay] 尝试播放: ${nextSong.name}, 索引: ${currentIndex} -> ${nowPlayListIndex}, 单曲重试: ${singleTrackRetryCount}/${SINGLE_TRACK_MAX_RETRIES}, 连续失败: ${consecutiveFailCount.value}/${MAX_CONSECUTIVE_FAILS}`
         );
+        console.log('[nextPlay] Current mode:', playMode.value, 'Playlist length:', playList.value.length);
 
         // 先尝试播放歌曲
         const success = await playerCore.handlePlayMusic(nextSong, true);
@@ -394,6 +408,7 @@ export const usePlaylistStore = defineStore(
           consecutiveFailCount.value = 0;
           playListIndex.value = nowPlayListIndex;
           console.log(`[nextPlay] 播放成功，索引已更新为: ${nowPlayListIndex}`);
+          console.log('[nextPlay] New current song in list:', playList.value[playListIndex.value]?.name);
           sleepTimerStore.handleSongChange();
         } else {
           console.error(`[nextPlay] 播放失败: ${nextSong.name}`);
