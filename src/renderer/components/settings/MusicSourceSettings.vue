@@ -1,253 +1,317 @@
 <template>
-  <n-modal
-    v-model:show="visible"
-    preset="dialog"
+  <ResponsiveModal
+    v-model="visible"
     :title="t('settings.playback.musicSources')"
-    :positive-text="t('common.confirm')"
-    :negative-text="t('common.cancel')"
-    class="music-source-modal"
-    @positive-click="handleConfirm"
-    @negative-click="handleCancel"
-    style="width: 800px; max-width: 90vw"
+    @close="handleCancel"
   >
-    <div class="h-[400px]">
-      <n-tabs type="segment" animated class="h-full flex flex-col">
-        <!-- Tab 1: 音源选择 -->
-        <n-tab-pane name="sources" tab="音源选择" class="h-full overflow-y-auto">
-          <n-space vertical :size="20" class="pt-4 pr-2">
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              {{ t('settings.playback.musicSourcesDesc') }}
-            </p>
+    <div class="flex flex-col h-full">
+      <!-- Tabs Header -->
+      <div class="flex p-0.5 mb-3 bg-gray-100 dark:bg-white/5 rounded-lg shrink-0">
+        <button
+          v-for="tab in tabs"
+          :key="tab.key"
+          class="flex-1 py-1 text-xs font-medium rounded-md transition-all duration-200"
+          :class="[
+            activeTab === tab.key
+              ? 'bg-white dark:bg-white/10 text-gray-900 dark:text-white shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+          ]"
+          @click="activeTab = tab.key"
+        >
+          {{ tab.label }}
+        </button>
+      </div>
 
-            <!-- 音源卡片列表 -->
-            <div class="music-sources-grid">
-              <div
-                v-for="source in MUSIC_SOURCES"
-                :key="source.key"
-                class="source-card"
-                :class="{
-                  'source-card--selected': isSourceSelected(source.key),
-                  'source-card--disabled': source.disabled && !isSourceSelected(source.key)
-                }"
-                :style="{ '--source-color': source.color }"
-                @click="toggleSource(source.key)"
-              >
-                <div class="source-card__indicator"></div>
-                <div class="source-card__content">
-                  <div class="source-card__header">
-                    <span class="source-card__name">{{ source.key }}</span>
-                    <n-icon
-                      v-if="isSourceSelected(source.key)"
-                      size="18"
-                      class="source-card__check"
-                    >
-                      <i class="ri-checkbox-circle-fill"></i>
-                    </n-icon>
-                  </div>
-                  <p v-if="source.description" class="source-card__description">
-                    {{ source.description }}
-                  </p>
-                </div>
-              </div>
+      <!-- Tab Content -->
+      <div class="h-[400px] relative shrink-0">
+        <Transition name="fade" mode="out-in">
+          <div :key="activeTab" class="h-full overflow-y-auto overscroll-contain">
+            <!-- Sources Tab -->
+            <div v-if="activeTab === 'sources'" class="space-y-3 pb-2">
+              <p class="text-xs text-gray-500 dark:text-gray-400 px-1">
+                {{ t('settings.playback.musicSourcesDesc') }}
+              </p>
 
-              <!-- 落雪音源卡片 (仅开关) -->
-              <div
-                class="source-card source-card--lxmusic"
-                :class="{
-                  'source-card--selected': isSourceSelected('lxMusic'),
-                  'source-card--disabled': !activeLxApiId || lxMusicApis.length === 0
-                }"
-                style="--source-color: #10b981"
-                @click="toggleSource('lxMusic')"
-              >
-                <div class="source-card__indicator"></div>
-                <div class="source-card__content">
-                  <div class="source-card__header">
-                    <span class="source-card__name">落雪音源</span>
-                    <n-icon v-if="isSourceSelected('lxMusic')" size="18" class="source-card__check">
-                      <i class="ri-checkbox-circle-fill"></i>
-                    </n-icon>
-                  </div>
-                  <p class="source-card__description">
-                    {{
-                      activeLxApiId && lxMusicScriptInfo
-                        ? lxMusicScriptInfo.name
-                        : '未配置 (请去落雪音源Tab配置)'
-                    }}
-                  </p>
-                </div>
-              </div>
-
-              <!-- 自定义API卡片 (仅开关) -->
-              <div
-                class="source-card source-card--custom"
-                :class="{
-                  'source-card--selected': isSourceSelected('custom'),
-                  'source-card--disabled': !settingsStore.setData.customApiPlugin
-                }"
-                style="--source-color: #8b5cf6"
-                @click="toggleSource('custom')"
-              >
-                <div class="source-card__indicator"></div>
-                <div class="source-card__content">
-                  <div class="source-card__header">
-                    <span class="source-card__name">{{
-                      t('settings.playback.sourceLabels.custom')
-                    }}</span>
-                    <n-icon v-if="isSourceSelected('custom')" size="18" class="source-card__check">
-                      <i class="ri-checkbox-circle-fill"></i>
-                    </n-icon>
-                  </div>
-                  <p class="source-card__description">
-                    {{
-                      settingsStore.setData.customApiPlugin
-                        ? t('settings.playback.customApi.status.imported')
-                        : t('settings.playback.customApi.status.notImported')
-                    }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </n-space>
-        </n-tab-pane>
-
-        <!-- Tab 2: 落雪音源管理 -->
-        <n-tab-pane name="lxMusic" tab="落雪音源" class="h-full overflow-y-auto">
-          <div class="pt-4 pr-2">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-base font-medium">已导入的音源脚本</h3>
-              <div class="flex gap-2">
-                <n-button @click="importLxMusicScript" size="small" secondary type="success">
-                  <template #icon>
-                    <n-icon><i class="ri-upload-line"></i></n-icon>
-                  </template>
-                  本地导入
-                </n-button>
-              </div>
-            </div>
-
-            <!-- 已导入的音源列表 -->
-            <div v-if="lxMusicApis.length > 0" class="lx-api-list mb-4">
-              <div
-                v-for="api in lxMusicApis"
-                :key="api.id"
-                class="lx-api-item"
-                :class="{ 'lx-api-item--active': activeLxApiId === api.id }"
-              >
-                <div class="lx-api-item__radio">
-                  <n-radio
-                    :checked="activeLxApiId === api.id"
-                    @update:checked="() => setActiveLxApi(api.id)"
-                  />
-                </div>
-                <div class="lx-api-item__info">
-                  <div class="flex items-center gap-2">
-                    <span class="lx-api-item__name" v-if="editingScriptId !== api.id">{{
-                      api.name
-                    }}</span>
-                    <n-input
-                      v-else
-                      v-model:value="editingName"
-                      size="tiny"
-                      class="w-32"
-                      ref="renameInputRef"
-                      @blur="saveScriptName(api.id)"
-                      @keyup.enter="saveScriptName(api.id)"
-                    />
-
-                    <n-button
-                      v-if="editingScriptId !== api.id"
-                      text
-                      size="tiny"
-                      @click="startRenaming(api)"
-                    >
-                      <template #icon>
-                        <n-icon class="text-gray-400 hover:text-primary"
-                          ><i class="ri-edit-line"></i
-                        ></n-icon>
-                      </template>
-                    </n-button>
-                  </div>
-                  <span v-if="api.info.version" class="lx-api-item__version"
-                    >v{{ api.info.version }}</span
-                  >
-                </div>
-                <div class="lx-api-item__actions">
-                  <n-button text size="tiny" type="error" @click="removeLxApi(api.id)">
-                    <template #icon>
-                      <n-icon><i class="ri-close-line"></i></n-icon>
-                    </template>
-                  </n-button>
-                </div>
-              </div>
-            </div>
-            <div v-else class="empty-state">
-              <n-empty description="暂无已导入的落雪音源" />
-            </div>
-
-            <!-- URL 导入区域 -->
-            <div class="mt-6">
-              <h4 class="text-sm font-medium mb-2 text-gray-600 dark:text-gray-400">在线导入</h4>
-              <div class="flex items-center gap-2">
-                <n-input
-                  v-model:value="lxScriptUrl"
-                  placeholder="输入落雪音源脚本 URL"
-                  size="small"
-                  class="flex-1"
-                  :disabled="isImportingFromUrl"
-                />
-                <n-button
-                  @click="importLxMusicScriptFromUrl"
-                  size="small"
-                  type="primary"
-                  :loading="isImportingFromUrl"
-                  :disabled="!lxScriptUrl.trim()"
+              <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <!-- Standard Sources -->
+                <div
+                  v-for="source in MUSIC_SOURCES"
+                  :key="source.key"
+                  class="group relative flex items-center p-2.5 rounded-xl border transition-all duration-200 cursor-pointer"
+                  :class="[
+                    isSourceSelected(source.key)
+                      ? 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'
+                      : 'bg-white dark:bg-white/5 border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10'
+                  ]"
+                  @click="toggleSource(source.key)"
                 >
-                  <template #icon>
-                    <n-icon><i class="ri-download-line"></i></n-icon>
-                  </template>
-                  导入
-                </n-button>
+                  <div
+                    class="flex items-center justify-center w-8 h-8 rounded-full mr-2.5 transition-colors shrink-0"
+                    :style="{
+                      backgroundColor: isSourceSelected(source.key) ? source.color : 'transparent',
+                      color: isSourceSelected(source.key) ? '#fff' : source.color
+                    }"
+                    :class="{ 'bg-gray-100 dark:bg-white/10': !isSourceSelected(source.key) }"
+                  >
+                    <i class="ri-music-2-fill text-base"></i>
+                  </div>
+                  
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <span class="font-semibold text-gray-900 dark:text-white text-sm truncate">{{ source.key }}</span>
+                      <div
+                        class="w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ml-1"
+                        :class="[
+                          isSourceSelected(source.key)
+                            ? 'bg-emerald-500 border-emerald-500'
+                            : 'border-gray-300 dark:border-gray-600'
+                        ]"
+                      >
+                        <i v-if="isSourceSelected(source.key)" class="ri-check-line text-white text-xs scale-75"></i>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- LX Music Source -->
+                <div
+                  class="group relative flex items-center p-2.5 rounded-xl border transition-all duration-200 cursor-pointer"
+                  :class="[
+                    isSourceSelected('lxMusic')
+                      ? 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'
+                      : 'bg-white dark:bg-white/5 border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10',
+                    { 'opacity-60 cursor-not-allowed': !activeLxApiId || lxMusicApis.length === 0 }
+                  ]"
+                  @click="toggleSource('lxMusic')"
+                >
+                  <div
+                    class="flex items-center justify-center w-8 h-8 rounded-full mr-2.5 transition-colors shrink-0"
+                    :class="[
+                      isSourceSelected('lxMusic')
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-gray-100 dark:bg-white/10 text-emerald-500'
+                    ]"
+                  >
+                    <i class="ri-netease-cloud-music-fill text-base"></i>
+                  </div>
+                  
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <span class="font-semibold text-gray-900 dark:text-white text-sm truncate">落雪音源</span>
+                      <div
+                        class="w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ml-1"
+                        :class="[
+                          isSourceSelected('lxMusic')
+                            ? 'bg-emerald-500 border-emerald-500'
+                            : 'border-gray-300 dark:border-gray-600'
+                        ]"
+                      >
+                        <i v-if="isSourceSelected('lxMusic')" class="ri-check-line text-white text-xs scale-75"></i>
+                      </div>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-0.5 truncate">
+                      {{ activeLxApiId && lxMusicScriptInfo ? lxMusicScriptInfo.name : t('settings.playback.lxMusic.scripts.notConfigured') }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Custom API Source -->
+                <div
+                  class="group relative flex items-center p-2.5 rounded-xl border transition-all duration-200 cursor-pointer"
+                  :class="[
+                    isSourceSelected('custom')
+                      ? 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'
+                      : 'bg-white dark:bg-white/5 border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10',
+                    { 'opacity-60 cursor-not-allowed': !settingsStore.setData.customApiPlugin }
+                  ]"
+                  @click="toggleSource('custom')"
+                >
+                  <div
+                    class="flex items-center justify-center w-8 h-8 rounded-full mr-2.5 transition-colors shrink-0"
+                    :class="[
+                      isSourceSelected('custom')
+                        ? 'bg-violet-500 text-white'
+                        : 'bg-gray-100 dark:bg-white/10 text-violet-500'
+                    ]"
+                  >
+                    <i class="ri-plug-fill text-base"></i>
+                  </div>
+                  
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between">
+                      <span class="font-semibold text-gray-900 dark:text-white text-sm truncate">{{ t('settings.playback.sourceLabels.custom') }}</span>
+                      <div
+                        class="w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ml-1"
+                        :class="[
+                          isSourceSelected('custom')
+                            ? 'bg-emerald-500 border-emerald-500'
+                            : 'border-gray-300 dark:border-gray-600'
+                        ]"
+                      >
+                        <i v-if="isSourceSelected('custom')" class="ri-check-line text-white text-xs scale-75"></i>
+                      </div>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-0.5 truncate">
+                      {{ settingsStore.setData.customApiPlugin ? t('settings.playback.customApi.status.imported') : t('settings.playback.customApi.status.notImported') }}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </n-tab-pane>
 
-        <!-- Tab 3: 自定义API管理 -->
-        <n-tab-pane name="customApi" tab="自定义API" class="h-full overflow-y-auto">
-          <div class="pt-4 flex flex-col items-center justify-center h-full gap-4">
-            <div class="text-center">
-              <h3 class="text-lg font-medium mb-2">
+            <!-- LX Music Management Tab -->
+            <div v-else-if="activeTab === 'lxMusic'" class="space-y-3 pb-2">
+              <div class="flex justify-between items-center mb-1">
+                <h3 class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ t('settings.playback.lxMusic.scripts.title') }}</h3>
+                <button
+                  @click="importLxMusicScript"
+                  class="flex items-center gap-1 px-2.5 py-1 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium rounded-lg transition-colors"
+                >
+                  <i class="ri-upload-line"></i>
+                  {{ t('settings.playback.lxMusic.scripts.importLocal') }}
+                </button>
+              </div>
+
+              <!-- Script List -->
+              <div v-if="lxMusicApis.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div
+                  v-for="api in lxMusicApis"
+                  :key="api.id"
+                  class="flex items-center p-2.5 rounded-xl border transition-all duration-200"
+                  :class="[
+                    activeLxApiId === api.id
+                      ? 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'
+                      : 'bg-white dark:bg-white/5 border-gray-100 dark:border-white/5'
+                  ]"
+                >
+                  <div class="relative flex items-center justify-center w-4 h-4 mr-3">
+                    <input
+                      type="radio"
+                      :checked="activeLxApiId === api.id"
+                      class="peer appearance-none w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 checked:border-emerald-500 checked:bg-emerald-500 transition-colors cursor-pointer"
+                      @change="setActiveLxApi(api.id)"
+                    />
+                    <i class="ri-check-line absolute text-white text-[10px] pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity"></i>
+                  </div>
+
+                  <div class="flex-1 min-w-0 mr-2">
+                    <div class="flex items-center gap-2">
+                      <span v-if="editingScriptId !== api.id" class="font-medium text-sm text-gray-900 dark:text-white truncate">
+                        {{ api.name }}
+                      </span>
+                      <input
+                        v-else
+                        v-model="editingName"
+                        ref="renameInputRef"
+                        class="w-full px-2 py-0.5 text-sm bg-white dark:bg-black/20 border border-emerald-500 rounded focus:outline-none"
+                        @blur="saveScriptName(api.id)"
+                        @keyup.enter="saveScriptName(api.id)"
+                      />
+                      
+                      <button
+                        v-if="editingScriptId !== api.id"
+                        class="text-gray-400 hover:text-emerald-500 transition-colors"
+                        @click="startRenaming(api)"
+                      >
+                        <i class="ri-edit-line text-sm"></i>
+                      </button>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                      <span v-if="api.info.version" class="text-[10px] text-gray-500 bg-gray-100 dark:bg-white/10 px-1.5 py-0.5 rounded">
+                        v{{ api.info.version }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                    @click="removeLxApi(api.id)"
+                  >
+                    <i class="ri-delete-bin-line text-sm"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div v-else class="py-6 text-center text-xs text-gray-400 bg-gray-50 dark:bg-white/5 rounded-xl border border-dashed border-gray-200 dark:border-white/10">
+                <p>{{ t('settings.playback.lxMusic.scripts.empty') }}</p>
+              </div>
+
+              <!-- URL Import -->
+              <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
+                <h4 class="text-xs font-medium mb-2 text-gray-900 dark:text-white">{{ t('settings.playback.lxMusic.scripts.importOnline') }}</h4>
+                <div class="flex gap-2">
+                  <input
+                    v-model="lxScriptUrl"
+                    :placeholder="t('settings.playback.lxMusic.scripts.urlPlaceholder')"
+                    class="flex-1 px-3 py-1.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                    :disabled="isImportingFromUrl"
+                  />
+                  <button
+                    @click="importLxMusicScriptFromUrl"
+                    class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium rounded-xl transition-colors flex items-center gap-1"
+                    :disabled="!lxScriptUrl.trim() || isImportingFromUrl"
+                  >
+                    <i v-if="isImportingFromUrl" class="ri-loader-4-line animate-spin"></i>
+                    <i v-else class="ri-download-line"></i>
+                    {{ t('settings.playback.lxMusic.scripts.importBtn') }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Custom API Tab -->
+            <div v-else-if="activeTab === 'customApi'" class="flex flex-col items-center justify-center py-6 text-center h-full">
+              <div class="w-12 h-12 bg-violet-100 dark:bg-violet-500/20 text-violet-500 rounded-xl flex items-center justify-center mb-3">
+                <i class="ri-plug-fill text-2xl"></i>
+              </div>
+              
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-1">
                 {{ t('settings.playback.customApi.sectionTitle') }}
               </h3>
-              <p class="text-gray-500 text-sm mb-4">导入兼容的自定义 API 插件以扩展音源</p>
-            </div>
+              <p class="text-gray-500 dark:text-gray-400 text-xs mb-4 max-w-xs mx-auto">
+                {{ t('settings.playback.lxMusic.scripts.importHint') }}
+              </p>
 
-            <div class="flex flex-col items-center gap-2">
-              <n-button @click="importPlugin" type="primary" secondary>
-                <template #icon>
-                  <n-icon><i class="ri-upload-line"></i></n-icon>
-                </template>
-                {{ t('settings.playback.customApi.importConfig') }}
-              </n-button>
-
-              <p
-                v-if="settingsStore.setData.customApiPluginName"
-                class="text-green-600 text-sm mt-2 flex items-center gap-1"
+              <button
+                @click="importPlugin"
+                class="px-5 py-2 bg-violet-500 hover:bg-violet-600 text-white text-sm font-medium rounded-xl transition-colors flex items-center gap-2 shadow-lg shadow-violet-500/20"
               >
-                <i class="ri-check-circle-line"></i>
-                {{ t('settings.playback.customApi.currentSource') }}:
-                <span class="font-semibold">{{ settingsStore.setData.customApiPluginName }}</span>
-              </p>
-              <p v-else class="text-gray-400 text-sm mt-2">
+                <i class="ri-upload-line"></i>
+                {{ t('settings.playback.customApi.importConfig') }}
+              </button>
+
+              <div v-if="settingsStore.setData.customApiPluginName" class="mt-4 flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 rounded-lg text-xs">
+                <i class="ri-check-circle-fill"></i>
+                <span>{{ t('settings.playback.customApi.currentSource') }}: <b>{{ settingsStore.setData.customApiPluginName }}</b></span>
+              </div>
+              
+              <div v-else class="mt-4 text-xs text-gray-400">
                 {{ t('settings.playback.customApi.notImported') }}
-              </p>
+              </div>
             </div>
           </div>
-        </n-tab-pane>
-      </n-tabs>
+        </Transition>
+      </div>
     </div>
-  </n-modal>
+
+    <!-- Footer Actions -->
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <button
+          class="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+          @click="handleCancel"
+        >
+          {{ t('common.cancel') }}
+        </button>
+        <button
+          class="px-4 py-2 text-xs font-medium text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg shadow-lg shadow-emerald-500/20 transition-all active:scale-95"
+          @click="handleConfirm"
+        >
+          {{ t('common.confirm') }}
+        </button>
+      </div>
+    </template>
+  </ResponsiveModal>
 </template>
 
 <script setup lang="ts">
@@ -255,6 +319,7 @@ import { useMessage } from 'naive-ui';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
+import ResponsiveModal from '@/components/common/ResponsiveModal.vue';
 import {
   initLxMusicRunner,
   parseScriptInfo,
@@ -303,6 +368,13 @@ const settingsStore = useSettingsStore();
 const message = useMessage();
 const visible = ref(props.show);
 const selectedSources = ref<ExtendedPlatform[]>([...props.sources]);
+const activeTab = ref('sources');
+
+const tabs = computed(() => [
+  { key: 'sources', label: t('settings.playback.lxMusic.tabs.sources') },
+  { key: 'lxMusic', label: t('settings.playback.lxMusic.tabs.lxMusic') },
+  { key: 'customApi', label: t('settings.playback.lxMusic.tabs.customApi') }
+]);
 
 // 落雪音源列表（从 store 中的脚本解析）
 const lxMusicApis = computed<LxMusicScriptConfig[]>(() => {
@@ -313,7 +385,7 @@ const lxMusicApis = computed<LxMusicScriptConfig[]>(() => {
 // 当前激活的音源 ID
 const activeLxApiId = computed<string | null>({
   get: () => settingsStore.setData.activeLxMusicApiId || null,
-  set: (id) => {
+  set: (id: string | null) => {
     settingsStore.setSetData({ activeLxMusicApiId: id });
   }
 });
@@ -322,18 +394,9 @@ const activeLxApiId = computed<string | null>({
 const lxMusicScriptInfo = computed<LxScriptInfo | null>(() => {
   const activeId = activeLxApiId.value;
   if (!activeId) {
-    console.log('[lxMusicScriptInfo] 没有激活的音源 ID');
     return null;
   }
-
-  const activeApi = lxMusicApis.value.find((api) => api.id === activeId);
-  console.log('[lxMusicScriptInfo] 查找激活的音源:', {
-    activeId,
-    found: !!activeApi,
-    name: activeApi?.name,
-    infoName: activeApi?.info?.name
-  });
-
+  const activeApi = lxMusicApis.value.find((api: LxMusicScriptConfig) => api.id === activeId);
   return activeApi?.info || null;
 });
 
@@ -359,17 +422,20 @@ const toggleSource = (sourceKey: string) => {
   // 检查是否是自定义API且未导入
   if (sourceKey === 'custom' && !settingsStore.setData.customApiPlugin) {
     message.warning(t('settings.playback.customApi.enableHint'));
+    activeTab.value = 'customApi';
     return;
   }
 
   // 检查是否是落雪音源且未配置
   if (sourceKey === 'lxMusic') {
     if (lxMusicApis.value.length === 0) {
-      message.warning('请先导入落雪音源脚本');
+      message.warning(t('settings.playback.lxMusic.scripts.noScriptWarning'));
+      activeTab.value = 'lxMusic';
       return;
     }
     if (!activeLxApiId.value) {
-      message.warning('请先选择一个落雪音源');
+      message.warning(t('settings.playback.lxMusic.scripts.noSelectionWarning'));
+      activeTab.value = 'lxMusic';
       return;
     }
   }
@@ -418,7 +484,7 @@ const importLxMusicScript = async () => {
     }
   } catch (error: any) {
     console.error('导入落雪音源脚本失败:', error);
-    message.error(`导入失败：${error.message}`);
+    message.error(`${t('common.error')}：${error.message}`);
   }
 };
 
@@ -428,15 +494,12 @@ const importLxMusicScript = async () => {
 const addLxMusicScript = async (scriptContent: string) => {
   // 解析脚本信息
   const scriptInfo = parseScriptInfo(scriptContent);
-  console.log('[MusicSourceSettings] 解析到的脚本信息:', scriptInfo);
 
   // 尝试初始化执行器以验证脚本
   try {
     const runner = await initLxMusicRunner(scriptContent);
     const sources = runner.getSources();
     const sourceKeys = Object.keys(sources) as LxSourceKey[];
-
-    console.log('[MusicSourceSettings] 脚本支持的音源:', sourceKeys);
 
     // 生成唯一 ID
     const id = `lx_api_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -452,13 +515,6 @@ const addLxMusicScript = async (scriptContent: string) => {
       createdAt: Date.now()
     };
 
-    console.log('[MusicSourceSettings] 创建的音源配置:', {
-      id: newApiConfig.id,
-      name: newApiConfig.name,
-      infoName: newApiConfig.info.name,
-      sources: newApiConfig.sources
-    });
-
     // 添加到列表
     const scripts = [...(settingsStore.setData.lxMusicScripts || []), newApiConfig];
 
@@ -467,13 +523,7 @@ const addLxMusicScript = async (scriptContent: string) => {
       activeLxMusicApiId: id // 自动激活新添加的音源
     });
 
-    console.log('[MusicSourceSettings] 保存后的 store 数据:', {
-      scriptsCount: scripts.length,
-      activeId: id,
-      firstScript: scripts[0] ? { id: scripts[0].id, name: scripts[0].name } : null
-    });
-
-    message.success(`音源脚本导入成功：${scriptInfo.name}，支持 ${sourceKeys.length} 个音源`);
+    message.success(`${t('common.success')}：${scriptInfo.name}`);
 
     // 导入成功后自动勾选
     if (!selectedSources.value.includes('lxMusic')) {
@@ -481,7 +531,7 @@ const addLxMusicScript = async (scriptContent: string) => {
     }
   } catch (initError: any) {
     console.error('[MusicSourceSettings] 落雪音源脚本初始化失败:', initError);
-    message.error(`脚本初始化失败：${initError.message}`);
+    message.error(`${t('common.error')}：${initError.message}`);
   }
 };
 
@@ -489,26 +539,18 @@ const addLxMusicScript = async (scriptContent: string) => {
  * 设置激活的落雪音源
  */
 const setActiveLxApi = async (apiId: string) => {
-  const api = lxMusicApis.value.find((a) => a.id === apiId);
+  const api = lxMusicApis.value.find((a: LxMusicScriptConfig) => a.id === apiId);
   if (!api) {
-    message.error('音源不存在');
+    message.error(t('settings.playback.lxMusic.scripts.notFound'));
     return;
   }
 
   try {
-    console.log('[MusicSourceSettings] 切换音源:', {
-      id: api.id,
-      name: api.name,
-      version: api.info?.version,
-      sources: api.sources
-    });
-
     // 清除旧的 runner
     setLxMusicRunner(null);
 
     // 初始化新选中的脚本
-    const runner = await initLxMusicRunner(api.script);
-    console.log('[MusicSourceSettings] 音源初始化成功，支持的音源:', runner.getSources());
+    await initLxMusicRunner(api.script);
 
     // 更新激活的音源 ID
     activeLxApiId.value = apiId;
@@ -518,10 +560,10 @@ const setActiveLxApi = async (apiId: string) => {
       selectedSources.value.push('lxMusic');
     }
 
-    message.success(`已切换到音源: ${api.name}`);
+    message.success(t('settings.playback.lxMusic.scripts.switched', { name: api.name }));
   } catch (error: any) {
     console.error('[MusicSourceSettings] 切换落雪音源失败:', error);
-    message.error(`切换失败：${error.message}`);
+    message.error(`${t('common.error')}：${error.message}`);
   }
 };
 
@@ -558,7 +600,7 @@ const removeLxApi = (apiId: string) => {
     }
   }
 
-  message.success(`已删除音源: ${removedScript.name}`);
+  message.success(t('settings.playback.lxMusic.scripts.deleted', { name: removedScript.name }));
 };
 
 /**
@@ -567,7 +609,7 @@ const removeLxApi = (apiId: string) => {
 const importLxMusicScriptFromUrl = async () => {
   const url = lxScriptUrl.value.trim();
   if (!url) {
-    message.warning('请输入脚本 URL');
+    message.warning(t('settings.playback.lxMusic.scripts.enterUrl'));
     return;
   }
 
@@ -575,7 +617,7 @@ const importLxMusicScriptFromUrl = async () => {
   try {
     new URL(url);
   } catch {
-    message.error('无效的 URL 格式');
+    message.error(t('settings.playback.lxMusic.scripts.invalidUrl'));
     return;
   }
 
@@ -590,13 +632,14 @@ const importLxMusicScriptFromUrl = async () => {
 
     const content = await response.text();
 
-    // 验证脚本格式
-    if (
-      !content.includes('globalThis.lx') &&
-      !content.includes('lx.on') &&
-      !content.includes('EVENT_NAMES')
-    ) {
-      throw new Error('无效的落雪音源脚本，未找到 globalThis.lx 相关代码');
+    // 验证脚本格式 - 检查是否包含 lx-music 脚本的特征
+    // 1. 检查是否有头部注释块（包含 @name、@version 等）
+    const hasHeaderComment = /^\/\*+[\s\S]*?@name[\s\S]*?\*\//.test(content);
+    // 2. 检查是否使用 lx API（lx.on 或 lx.send）
+    const hasLxApi = content.includes('lx.on(') || content.includes('lx.send(');
+
+    if (!hasHeaderComment && !hasLxApi) {
+      throw new Error(t('settings.playback.lxMusic.scripts.invalidScript'));
     }
 
     // 使用统一的添加方法
@@ -606,7 +649,7 @@ const importLxMusicScriptFromUrl = async () => {
     lxScriptUrl.value = '';
   } catch (error: any) {
     console.error('从 URL 导入落雪音源脚本失败:', error);
-    message.error(`在线导入失败：${error.message}`);
+    message.error(`${t('settings.playback.lxMusic.scripts.importOnline')} ${t('common.error')}：${error.message}`);
   } finally {
     isImportingFromUrl.value = false;
   }
@@ -628,7 +671,7 @@ const startRenaming = (api: LxMusicScriptConfig) => {
  */
 const saveScriptName = (apiId: string) => {
   if (!editingName.value.trim()) {
-    message.warning('名称不能为空');
+    message.warning(t('settings.playback.lxMusic.scripts.nameRequired'));
     return;
   }
 
@@ -645,7 +688,7 @@ const saveScriptName = (apiId: string) => {
       lxMusicScripts: scripts
     });
 
-    message.success('重命名成功');
+    message.success(t('settings.playback.lxMusic.scripts.renameSuccess'));
   }
 
   editingScriptId.value = null;
@@ -675,7 +718,7 @@ const handleCancel = () => {
 // 监听自定义插件内容变化
 watch(
   () => settingsStore.setData.customApiPlugin,
-  (newPluginContent) => {
+  (newPluginContent: any) => {
     if (!newPluginContent) {
       const index = selectedSources.value.indexOf('custom');
       if (index > -1) {
@@ -688,7 +731,7 @@ watch(
 // 监听落雪音源列表变化
 watch(
   () => [lxMusicApis.value.length, activeLxApiId.value],
-  ([apiCount, activeId]) => {
+  ([apiCount, activeId]: [number, string | null]) => {
     // 如果没有音源或没有激活的音源，自动从已选音源中移除 lxMusic
     if (apiCount === 0 || !activeId) {
       const index = selectedSources.value.indexOf('lxMusic');
@@ -703,7 +746,7 @@ watch(
 // 同步外部show属性变化
 watch(
   () => props.show,
-  (newVal) => {
+  (newVal: boolean) => {
     visible.value = newVal;
   }
 );
@@ -711,7 +754,7 @@ watch(
 // 同步内部visible变化
 watch(
   () => visible.value,
-  (newVal) => {
+  (newVal: boolean) => {
     emit('update:show', newVal);
   }
 );
@@ -719,225 +762,21 @@ watch(
 // 同步外部sources属性变化
 watch(
   () => props.sources,
-  (newVal) => {
+  (newVal: ExtendedPlatform[]) => {
     selectedSources.value = [...newVal];
   },
   { deep: true }
 );
 </script>
 
-<style lang="scss" scoped>
-.music-sources-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 12px;
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
 }
 
-.source-card {
-  position: relative;
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background:
-    linear-gradient(white, white) padding-box,
-    linear-gradient(135deg, var(--source-color, #ddd) 0%, transparent 100%) border-box;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--source-color);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  &__indicator {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--source-color);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  &__content {
-    position: relative;
-    z-index: 1;
-  }
-
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-
-  &__name {
-    font-size: 15px;
-    font-weight: 600;
-    color: #333;
-    transition: color 0.2s ease;
-  }
-
-  &__check {
-    color: var(--source-color);
-    opacity: 0;
-    transform: scale(0.8);
-    transition: all 0.2s ease;
-  }
-
-  &__description {
-    font-size: 12px;
-    color: #999;
-    margin: 0;
-    transition: color 0.2s ease;
-  }
-
-  &:hover {
-    border-color: var(--source-color);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-
-  &--selected {
-    border-color: var(--source-color);
-    background:
-      linear-gradient(white, white) padding-box,
-      var(--source-color) border-box;
-
-    .source-card__indicator {
-      opacity: 1;
-    }
-
-    .source-card__check {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    &::before {
-      opacity: 0.05;
-    }
-  }
-
-  &--disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-
-    &:hover {
-      transform: none;
-      box-shadow: none;
-    }
-  }
-}
-
-// 深色模式适配
-:global(.dark) {
-  .source-card {
-    background:
-      linear-gradient(#1f1f1f, #1f1f1f) padding-box,
-      linear-gradient(135deg, var(--source-color, #555) 0%, transparent 100%) border-box;
-
-    &__name {
-      color: #e5e5e5;
-    }
-
-    &__description {
-      color: #999;
-    }
-
-    &--selected {
-      background:
-        linear-gradient(#1f1f1f, #1f1f1f) padding-box,
-        var(--source-color) border-box;
-    }
-  }
-}
-
-.lx-api-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.lx-api-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  transition: all 0.2s ease;
-
-  &--active {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.08));
-    border-color: rgba(16, 185, 129, 0.3);
-  }
-
-  &__radio {
-    flex-shrink: 0;
-  }
-
-  &__info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  &__name {
-    font-size: 13px;
-    font-weight: 500;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__version {
-    font-size: 12px;
-    color: #999;
-    background: rgba(0, 0, 0, 0.05);
-    padding: 1px 6px;
-    border-radius: 4px;
-  }
-
-  &__actions {
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  &:hover &__actions {
-    opacity: 1;
-  }
-}
-
-:global(.dark) {
-  .lx-api-item {
-    background: #2a2a2a;
-
-    &__name {
-      color: #e5e5e5;
-    }
-
-    &__version {
-      background: rgba(255, 255, 255, 0.1);
-    }
-  }
-}
-
-.empty-state {
-  padding: 32px 0;
-  display: flex;
-  justify-content: center;
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

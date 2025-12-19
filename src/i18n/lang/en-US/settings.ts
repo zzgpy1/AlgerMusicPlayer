@@ -119,6 +119,33 @@ export default {
         imported: 'Custom Source Imported',
         notImported: 'Not Imported'
       }
+    },
+    lxMusic: {
+      tabs: {
+        sources: 'Source Selection',
+        lxMusic: 'LX Music',
+        customApi: 'Custom API'
+      },
+      scripts: {
+        title: 'Imported Scripts',
+        importLocal: 'Import Local',
+        importOnline: 'Import Online',
+        urlPlaceholder: 'Enter LX Music Script URL',
+        importBtn: 'Import',
+        empty: 'No imported LX Music scripts',
+        notConfigured: 'Not configured (Configure in LX Music Tab)',
+        importHint: 'Import compatible custom API plugins to extend sources',
+        noScriptWarning: 'Please import LX Music script first',
+        noSelectionWarning: 'Please select an LX Music source first',
+        notFound: 'Source not found',
+        switched: 'Switched to source: {name}',
+        deleted: 'Deleted source: {name}',
+        enterUrl: 'Please enter script URL',
+        invalidUrl: 'Invalid URL format',
+        invalidScript: 'Invalid LX Music script, globalThis.lx code not found',
+        nameRequired: 'Name cannot be empty',
+        renameSuccess: 'Rename successful'
+      }
     }
   },
   application: {
