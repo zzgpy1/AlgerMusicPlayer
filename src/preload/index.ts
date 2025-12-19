@@ -58,7 +58,16 @@ const api = {
     return Promise.reject(new Error(`未授权的 IPC 通道: ${channel}`));
   },
   // 搜索建议
-  getSearchSuggestions: (keyword: string) => ipcRenderer.invoke('get-search-suggestions', keyword)
+  getSearchSuggestions: (keyword: string) => ipcRenderer.invoke('get-search-suggestions', keyword),
+
+  // 落雪音乐 HTTP 请求（绕过 CORS）
+  lxMusicHttpRequest: (request: {
+    url: string;
+    options: any;
+    requestId: string;
+  }) => ipcRenderer.invoke('lx-music-http-request', request),
+
+  lxMusicHttpCancel: (requestId: string) => ipcRenderer.invoke('lx-music-http-cancel', requestId)
 };
 
 // 创建带类型的ipcRenderer对象，暴露给渲染进程

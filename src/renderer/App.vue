@@ -27,6 +27,7 @@ import { checkLoginStatus } from '@/utils/auth';
 
 import { initAudioListeners, initMusicHook } from './hooks/MusicHook';
 import { audioService } from './services/audioService';
+import { initLxMusicRunner } from './services/LxMusicSourceRunner';
 import { isMobile } from './utils';
 import { useAppShortcuts } from './utils/appShortcuts';
 
@@ -124,6 +125,21 @@ onMounted(async () => {
   initMusicHook(playerStore);
   // 初始化播放状态
   await playerStore.initializePlayState();
+
+  // 初始化落雪音源（如果有激活的音源）
+  const activeLxApiId = settingsStore.setData?.activeLxMusicApiId;
+  if (activeLxApiId) {
+    const lxMusicScripts = settingsStore.setData?.lxMusicScripts || [];
+    const activeScript = lxMusicScripts.find((script: any) => script.id === activeLxApiId);
+    if (activeScript && activeScript.script) {
+      try {
+        console.log('[App] 初始化激活的落雪音源:', activeScript.name);
+        await initLxMusicRunner(activeScript.script);
+      } catch (error) {
+        console.error('[App] 初始化落雪音源失败:', error);
+      }
+    }
+  }
 
   // 如果有正在播放的音乐，则初始化音频监听器
   if (playerStore.playMusic && playerStore.playMusic.id) {

@@ -55,7 +55,7 @@
                 class="source-card source-card--lxmusic"
                 :class="{
                   'source-card--selected': isSourceSelected('lxMusic'),
-                  'source-card--disabled': !settingsStore.setData.lxMusicScript
+                  'source-card--disabled': !activeLxApiId || lxMusicApis.length === 0
                 }"
                 style="--source-color: #10b981"
                 @click="toggleSource('lxMusic')"
@@ -70,9 +70,9 @@
                   </div>
                   <p class="source-card__description">
                     {{
-                      settingsStore.setData.lxMusicScript
-                        ? lxMusicScriptInfo?.name || '已导入'
-                        : '未导入 (请去落雪音源Tab配置)'
+                      activeLxApiId && lxMusicScriptInfo
+                        ? lxMusicScriptInfo.name
+                        : '未配置 (请去落雪音源Tab配置)'
                     }}
                   </p>
                 </div>
@@ -321,8 +321,19 @@ const activeLxApiId = computed<string | null>({
 // 落雪音源脚本信息（保持向后兼容）
 const lxMusicScriptInfo = computed<LxScriptInfo | null>(() => {
   const activeId = activeLxApiId.value;
-  if (!activeId) return null;
+  if (!activeId) {
+    console.log('[lxMusicScriptInfo] 没有激活的音源 ID');
+    return null;
+  }
+
   const activeApi = lxMusicApis.value.find((api) => api.id === activeId);
+  console.log('[lxMusicScriptInfo] 查找激活的音源:', {
+    activeId,
+    found: !!activeApi,
+    name: activeApi?.name,
+    infoName: activeApi?.info?.name
+  });
+
   return activeApi?.info || null;
 });
 
@@ -351,10 +362,16 @@ const toggleSource = (sourceKey: string) => {
     return;
   }
 
-  // 检查是否是落雪音源且未导入
-  if (sourceKey === 'lxMusic' && !settingsStore.setData.lxMusicScript) {
-    message.warning('请先导入落雪音源脚本');
-    return;
+  // 检查是否是落雪音源且未配置
+  if (sourceKey === 'lxMusic') {
+    if (lxMusicApis.value.length === 0) {
+      message.warning('请先导入落雪音源脚本');
+      return;
+    }
+    if (!activeLxApiId.value) {
+      message.warning('请先选择一个落雪音源');
+      return;
+    }
   }
 
   const index = selectedSources.value.indexOf(sourceKey as ExtendedPlatform);
@@ -411,12 +428,15 @@ const importLxMusicScript = async () => {
 const addLxMusicScript = async (scriptContent: string) => {
   // 解析脚本信息
   const scriptInfo = parseScriptInfo(scriptContent);
+  console.log('[MusicSourceSettings] 解析到的脚本信息:', scriptInfo);
 
   // 尝试初始化执行器以验证脚本
   try {
     const runner = await initLxMusicRunner(scriptContent);
     const sources = runner.getSources();
     const sourceKeys = Object.keys(sources) as LxSourceKey[];
+
+    console.log('[MusicSourceSettings] 脚本支持的音源:', sourceKeys);
 
     // 生成唯一 ID
     const id = `lx_api_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -432,12 +452,25 @@ const addLxMusicScript = async (scriptContent: string) => {
       createdAt: Date.now()
     };
 
+    console.log('[MusicSourceSettings] 创建的音源配置:', {
+      id: newApiConfig.id,
+      name: newApiConfig.name,
+      infoName: newApiConfig.info.name,
+      sources: newApiConfig.sources
+    });
+
     // 添加到列表
     const scripts = [...(settingsStore.setData.lxMusicScripts || []), newApiConfig];
 
     settingsStore.setSetData({
       lxMusicScripts: scripts,
       activeLxMusicApiId: id // 自动激活新添加的音源
+    });
+
+    console.log('[MusicSourceSettings] 保存后的 store 数据:', {
+      scriptsCount: scripts.length,
+      activeId: id,
+      firstScript: scripts[0] ? { id: scripts[0].id, name: scripts[0].name } : null
     });
 
     message.success(`音源脚本导入成功：${scriptInfo.name}，支持 ${sourceKeys.length} 个音源`);
@@ -447,7 +480,7 @@ const addLxMusicScript = async (scriptContent: string) => {
       selectedSources.value.push('lxMusic');
     }
   } catch (initError: any) {
-    console.error('落雪音源脚本初始化失败:', initError);
+    console.error('[MusicSourceSettings] 落雪音源脚本初始化失败:', initError);
     message.error(`脚本初始化失败：${initError.message}`);
   }
 };
@@ -463,8 +496,19 @@ const setActiveLxApi = async (apiId: string) => {
   }
 
   try {
-    // 初始化选中的脚本
-    await initLxMusicRunner(api.script);
+    console.log('[MusicSourceSettings] 切换音源:', {
+      id: api.id,
+      name: api.name,
+      version: api.info?.version,
+      sources: api.sources
+    });
+
+    // 清除旧的 runner
+    setLxMusicRunner(null);
+
+    // 初始化新选中的脚本
+    const runner = await initLxMusicRunner(api.script);
+    console.log('[MusicSourceSettings] 音源初始化成功，支持的音源:', runner.getSources());
 
     // 更新激活的音源 ID
     activeLxApiId.value = apiId;
@@ -476,7 +520,7 @@ const setActiveLxApi = async (apiId: string) => {
 
     message.success(`已切换到音源: ${api.name}`);
   } catch (error: any) {
-    console.error('切换落雪音源失败:', error);
+    console.error('[MusicSourceSettings] 切换落雪音源失败:', error);
     message.error(`切换失败：${error.message}`);
   }
 };
@@ -639,6 +683,21 @@ watch(
       }
     }
   }
+);
+
+// 监听落雪音源列表变化
+watch(
+  () => [lxMusicApis.value.length, activeLxApiId.value],
+  ([apiCount, activeId]) => {
+    // 如果没有音源或没有激活的音源，自动从已选音源中移除 lxMusic
+    if (apiCount === 0 || !activeId) {
+      const index = selectedSources.value.indexOf('lxMusic');
+      if (index > -1) {
+        selectedSources.value.splice(index, 1);
+      }
+    }
+  },
+  { deep: true }
 );
 
 // 同步外部show属性变化

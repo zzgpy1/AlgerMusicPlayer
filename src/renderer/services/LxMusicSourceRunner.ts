@@ -17,6 +17,7 @@ import type {
   LxSourceConfig,
   LxSourceKey
 } from '@/types/lxMusic';
+import * as lxCrypto from '@/utils/lxCrypto';
 
 /**
  * 解析脚本头部注释中的元信息
@@ -27,27 +28,46 @@ export const parseScriptInfo = (script: string): LxScriptInfo => {
     rawScript: script
   };
 
-  // 匹配头部注释块
-  const headerMatch = script.match(/^\/\*\*[\s\S]*?\*\//);
-  if (!headerMatch) return info;
+  // 尝试匹配不同格式的头部注释块
+  // 支持 /** ... */ 和 /* ... */ 格式
+  const headerMatch = script.match(/^\/\*+[\s\S]*?\*\//);
+  if (!headerMatch) {
+    console.warn('[parseScriptInfo] 未找到脚本头部注释块');
+    return info;
+  }
 
   const header = headerMatch[0];
+  console.log('[parseScriptInfo] 解析脚本头部:', header.substring(0, 200));
 
-  // 解析各个字段
+  // 解析各个字段（支持 * 前缀和无前缀两种格式）
   const nameMatch = header.match(/@name\s+(.+?)(?:\r?\n|\*\/)/);
-  if (nameMatch) info.name = nameMatch[1].trim();
+  if (nameMatch) {
+    info.name = nameMatch[1].trim().replace(/^\*\s*/, '');
+    console.log('[parseScriptInfo] 解析到名称:', info.name);
+  } else {
+    console.warn('[parseScriptInfo] 未找到 @name 标签');
+  }
 
   const descMatch = header.match(/@description\s+(.+?)(?:\r?\n|\*\/)/);
-  if (descMatch) info.description = descMatch[1].trim();
+  if (descMatch) {
+    info.description = descMatch[1].trim().replace(/^\*\s*/, '');
+  }
 
   const versionMatch = header.match(/@version\s+(.+?)(?:\r?\n|\*\/)/);
-  if (versionMatch) info.version = versionMatch[1].trim();
+  if (versionMatch) {
+    info.version = versionMatch[1].trim().replace(/^\*\s*/, '');
+    console.log('[parseScriptInfo] 解析到版本:', info.version);
+  }
 
   const authorMatch = header.match(/@author\s+(.+?)(?:\r?\n|\*\/)/);
-  if (authorMatch) info.author = authorMatch[1].trim();
+  if (authorMatch) {
+    info.author = authorMatch[1].trim().replace(/^\*\s*/, '');
+  }
 
   const homepageMatch = header.match(/@homepage\s+(.+?)(?:\r?\n|\*\/)/);
-  if (homepageMatch) info.homepage = homepageMatch[1].trim();
+  if (homepageMatch) {
+    info.homepage = homepageMatch[1].trim().replace(/^\*\s*/, '');
+  }
 
   return info;
 };
@@ -209,26 +229,16 @@ export class LxMusicSourceRunner {
             }
           },
           crypto: {
-            md5: (str: string) => {
-              // 简化的 MD5 实现，实际使用可能需要引入完整库
-              console.warn('[LxMusicRunner] MD5 暂未完整实现');
-              return str;
-            },
-            randomBytes: (size: number) => {
-              const array = new Uint8Array(size);
-              crypto.getRandomValues(array);
-              return Array.from(array)
-                .map((b) => b.toString(16).padStart(2, '0'))
-                .join('');
-            },
-            aesEncrypt: (buffer: any, _mode: string, _key: any, _iv: any) => {
-              console.warn('[LxMusicRunner] AES 加密暂未实现');
-              return buffer;
-            },
-            rsaEncrypt: (buffer: any, _key: string) => {
-              console.warn('[LxMusicRunner] RSA 加密暂未实现');
-              return buffer;
-            }
+            md5: lxCrypto.md5,
+            sha1: lxCrypto.sha1,
+            sha256: lxCrypto.sha256,
+            randomBytes: lxCrypto.randomBytes,
+            aesEncrypt: lxCrypto.aesEncrypt,
+            aesDecrypt: lxCrypto.aesDecrypt,
+            rsaEncrypt: lxCrypto.rsaEncrypt,
+            rsaDecrypt: lxCrypto.rsaDecrypt,
+            base64Encode: lxCrypto.base64Encode,
+            base64Decode: lxCrypto.base64Decode
           },
           zlib: {
             inflate: async (buffer: ArrayBuffer) => {
@@ -337,96 +347,135 @@ export class LxMusicSourceRunner {
   }
 
   /**
-   * 处理 HTTP 请求
+   * 处理 HTTP 请求（优先使用主进程，绕过 CORS 限制）
    */
   private handleHttpRequest(
     url: string,
     options: any,
     callback: (err: Error | null, resp: any, body: any) => void
   ): () => void {
-    const controller = new AbortController();
-
     console.log(`[LxMusicRunner] HTTP 请求: ${options.method || 'GET'} ${url}`);
 
-    const fetchOptions: RequestInit = {
-      method: options.method || 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        ...options.headers
-      },
-      signal: controller.signal,
-      // 使用 cors 模式尝试跨域请求
-      mode: 'cors',
-      // 不发送凭据
-      credentials: 'omit'
-    };
-
-    if (options.body) {
-      fetchOptions.body = options.body;
-    } else if (options.form) {
-      fetchOptions.body = new URLSearchParams(options.form);
-      fetchOptions.headers = {
-        ...fetchOptions.headers,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      };
-    } else if (options.formData) {
-      const formData = new FormData();
-      for (const [key, value] of Object.entries(options.formData)) {
-        formData.append(key, value as string);
-      }
-      fetchOptions.body = formData;
-    }
-
     const timeout = options.timeout || 30000;
-    const timeoutId = setTimeout(() => {
-      console.warn(`[LxMusicRunner] HTTP 请求超时: ${url}`);
-      controller.abort();
-    }, timeout);
+    const requestId = `lx_http_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-    fetch(url, fetchOptions)
-      .then(async (response) => {
-        clearTimeout(timeoutId);
-        console.log(`[LxMusicRunner] HTTP 响应: ${response.status} ${url}`);
+    // 尝试使用主进程 HTTP 请求（如果可用）
+    const hasMainProcessHttp = typeof window.api?.lxMusicHttpRequest === 'function';
 
-        const rawBody = await response.text();
+    if (hasMainProcessHttp) {
+      // 使用主进程 HTTP 请求（绕过 CORS）
+      console.log(`[LxMusicRunner] 使用主进程 HTTP 请求`);
 
-        // 尝试解析 JSON，如果是 JSON 则返回解析后的对象
-        let parsedBody: any = rawBody;
-        const contentType = response.headers.get('content-type') || '';
-        if (
-          contentType.includes('application/json') ||
-          rawBody.startsWith('{') ||
-          rawBody.startsWith('[')
-        ) {
-          try {
-            parsedBody = JSON.parse(rawBody);
-            // 如果响应中包含 URL，缓存下来以备后用
-            if (parsedBody && parsedBody.url && typeof parsedBody.url === 'string') {
-              this.lastMusicUrl = parsedBody.url;
-            }
-          } catch {
-            // 解析失败则使用原始字符串
-          }
-        }
-
-        callback(
-          null,
-          {
-            statusCode: response.status,
-            headers: Object.fromEntries(response.headers.entries()),
-            body: parsedBody
+      window.api
+        .lxMusicHttpRequest({
+          url,
+          options: {
+            ...options,
+            timeout
           },
-          parsedBody
-        );
-      })
-      .catch((error) => {
-        clearTimeout(timeoutId);
-        console.error(`[LxMusicRunner] HTTP 请求失败: ${url}`, error.message);
-        callback(error, null, null);
-      });
+          requestId
+        })
+        .then((response: any) => {
+          console.log(`[LxMusicRunner] HTTP 响应: ${response.statusCode} ${url}`);
 
-    // 返回取消函数
-    return () => controller.abort();
+          // 如果响应中包含 URL，缓存下来以备后用
+          if (response.body && response.body.url && typeof response.body.url === 'string') {
+            this.lastMusicUrl = response.body.url;
+          }
+
+          callback(null, response, response.body);
+        })
+        .catch((error: Error) => {
+          console.error(`[LxMusicRunner] HTTP 请求失败: ${url}`, error.message);
+          callback(error, null, null);
+        });
+
+      // 返回取消函数
+      return () => {
+        void window.api?.lxMusicHttpCancel?.(requestId);
+      };
+    } else {
+      // 回退到渲染进程 fetch（可能受 CORS 限制）
+      console.log(`[LxMusicRunner] 主进程 HTTP 不可用，使用渲染进程 fetch`);
+
+      const controller = new AbortController();
+
+      const fetchOptions: RequestInit = {
+        method: options.method || 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          ...options.headers
+        },
+        signal: controller.signal,
+        mode: 'cors',
+        credentials: 'omit'
+      };
+
+      if (options.body) {
+        fetchOptions.body = options.body;
+      } else if (options.form) {
+        fetchOptions.body = new URLSearchParams(options.form);
+        fetchOptions.headers = {
+          ...fetchOptions.headers,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        };
+      } else if (options.formData) {
+        const formData = new FormData();
+        for (const [key, value] of Object.entries(options.formData)) {
+          formData.append(key, value as string);
+        }
+        fetchOptions.body = formData;
+      }
+
+      const timeoutId = setTimeout(() => {
+        console.warn(`[LxMusicRunner] HTTP 请求超时: ${url}`);
+        controller.abort();
+      }, timeout);
+
+      fetch(url, fetchOptions)
+        .then(async (response) => {
+          clearTimeout(timeoutId);
+          console.log(`[LxMusicRunner] HTTP 响应: ${response.status} ${url}`);
+
+          const rawBody = await response.text();
+
+          // 尝试解析 JSON
+          let parsedBody: any = rawBody;
+          const contentType = response.headers.get('content-type') || '';
+          if (
+            contentType.includes('application/json') ||
+            rawBody.startsWith('{') ||
+            rawBody.startsWith('[')
+          ) {
+            try {
+              parsedBody = JSON.parse(rawBody);
+              if (parsedBody && parsedBody.url && typeof parsedBody.url === 'string') {
+                this.lastMusicUrl = parsedBody.url;
+              }
+            } catch {
+              // 解析失败则使用原始字符串
+            }
+          }
+
+          callback(
+            null,
+            {
+              statusCode: response.status,
+              headers: Object.fromEntries(response.headers.entries()),
+              body: parsedBody
+            },
+            parsedBody
+          );
+        })
+        .catch((error) => {
+          clearTimeout(timeoutId);
+          console.error(`[LxMusicRunner] HTTP 请求失败: ${url}`, error.message);
+          callback(error, null, null);
+        });
+
+      // 返回取消函数
+      return () => controller.abort();
+    }
   }
 
   /**

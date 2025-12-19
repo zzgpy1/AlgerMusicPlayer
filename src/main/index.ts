@@ -17,6 +17,7 @@ import { setupUpdateHandlers } from './modules/update';
 import { createMainWindow, initializeWindowManager, setAppQuitting } from './modules/window';
 import { initWindowSizeManager } from './modules/window-size';
 import { startMusicApi } from './server';
+import { initLxMusicHttp } from './modules/lxMusicHttp';
 
 // 导入所有图标
 const iconPath = join(__dirname, '../../resources');
@@ -56,6 +57,9 @@ function initialize(configStore: any) {
 
   // 启动音乐API
   startMusicApi();
+
+  // 初始化落雪音乐 HTTP 请求处理
+  initLxMusicHttp();
 
   // 加载歌词窗口
   loadLyricWindow(ipcMain, mainWindow);
