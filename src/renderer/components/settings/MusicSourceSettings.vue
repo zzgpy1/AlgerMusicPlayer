@@ -730,8 +730,8 @@ watch(
 
 // 监听落雪音源列表变化
 watch(
-  () => [lxMusicApis.value.length, activeLxApiId.value],
-  ([apiCount, activeId]: [number, string | null]) => {
+  [() => lxMusicApis.value.length, () => activeLxApiId.value],
+  ([apiCount, activeId]) => {
     // 如果没有音源或没有激活的音源，自动从已选音源中移除 lxMusic
     if (apiCount === 0 || !activeId) {
       const index = selectedSources.value.indexOf('lxMusic');

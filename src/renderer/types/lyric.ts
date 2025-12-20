@@ -3,6 +3,7 @@ export interface LyricConfig {
   centerLyrics: boolean;
   fontSize: number;
   letterSpacing: number;
+  fontWeight: number;
   lineHeight: number;
   showTranslation: boolean;
   theme: 'default' | 'light' | 'dark';
@@ -35,6 +36,7 @@ export const DEFAULT_LYRIC_CONFIG: LyricConfig = {
   centerLyrics: false,
   fontSize: 22,
   letterSpacing: 0,
+  fontWeight: 500,
   lineHeight: 2,
   showTranslation: true,
   theme: 'default',

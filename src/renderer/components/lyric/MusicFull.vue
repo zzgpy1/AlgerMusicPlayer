@@ -31,7 +31,7 @@
         class="control-right absolute top-8 right-8 z-[9999]"
         :class="{ 'pure-mode': config.pureModeEnabled }"
       >
-        <n-popover trigger="click" placement="bottom">
+        <n-popover trigger="click" placement="bottom" raw>
           <template #trigger>
             <div class="control-btn">
               <i class="ri-settings-3-line"></i>
@@ -110,7 +110,7 @@
             @mouseleave="mouseLeaveLayout"
           >
             <!-- 歌曲信息 -->
-            <div ref="lrcContainer" class="music-lrc-container">
+            <div class="music-lrc-container">
               <div
                 v-if="config.hideCover"
                 class="music-info-header"
@@ -212,7 +212,6 @@ const { t } = useI18n();
 // 定义 refs
 const lrcSider = ref<any>(null);
 const isMouse = ref(false);
-const lrcContainer = ref<HTMLElement | null>(null);
 const currentBackground = ref('');
 const animationFrame = ref<number | null>(null);
 const isDark = ref(false);
@@ -670,6 +669,14 @@ watch(
   }
 );
 
+// 监听字体粗细变化
+watch(
+  () => config.value.fontWeight,
+  (newWeight) => {
+    document.documentElement.style.setProperty('--lyric-font-weight', newWeight.toString());
+  }
+);
+
 // 监听主题变化
 watch(
   () => config.value.theme,
@@ -889,6 +896,7 @@ defineExpose({
     .music-lrc-text {
       @apply text-2xl cursor-pointer font-bold px-4 py-3;
       font-family: var(--current-font-family);
+      font-weight: var(--lyric-font-weight, bold) !important;
       transition: all 0.3s ease;
       background-color: transparent;
       font-size: var(--lyric-font-size, 22px) !important;
@@ -1070,11 +1078,5 @@ defineExpose({
     opacity: 1 !important;
     pointer-events: auto !important;
   }
-}
-
-/* 移除 Popover padding */
-:deep(.n-popover) {
-  padding: 0 !important;
-  background-color: transparent !important;
 }
 </style>

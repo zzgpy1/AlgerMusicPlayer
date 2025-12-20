@@ -270,6 +270,12 @@ export default {
       medium: '中',
       large: '大'
     },
+    fontWeight: '字体粗细',
+    fontWeightMarks: {
+      thin: '细',
+      normal: '常规',
+      bold: '粗'
+    },
     letterSpacing: '字间距',
     letterSpacingMarks: {
       compact: '紧凑',

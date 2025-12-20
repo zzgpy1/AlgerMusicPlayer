@@ -1,10 +1,10 @@
 <template>
   <div
-    class="w-96 rounded-2xl bg-white/5 backdrop-blur-3xl border border-white/10 shadow-2xl overflow-hidden"
+    class="w-80 rounded-2xl bg-black/30 backdrop-blur-3xl border border-white/10 shadow-2xl overflow-hidden"
   >
     <!-- 标题栏 -->
     <div class="px-6 py-4 border-b border-white/5">
-      <h2 class="text-lg font-semibold tracking-tight" style="color: var(--text-color-active)">
+      <h2 class="text-lg font-semibold tracking-tight text-white/90">
         {{ t('settings.lyricSettings.title') }}
       </h2>
     </div>
@@ -22,7 +22,7 @@
               ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
               : 'hover:bg-white/5'
           ]"
-          :style="activeTab !== tab.key ? 'color: var(--text-color-primary); opacity: 0.7' : ''"
+          :style="activeTab !== tab.key ? 'color: rgba(255, 255, 255, 0.7);' : ''"
         >
           {{ tab.label }}
         </button>
@@ -31,10 +31,10 @@
 
     <!-- 内容区域 -->
     <div
-      class="px-4 pb-4 max-h-[500px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+      class="px-3 pb-3 max-h-[450px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
     >
       <!-- 显示设置 -->
-      <div v-show="activeTab === 'display'" class="space-y-3 pt-3">
+      <div v-show="activeTab === 'display'" class="space-y-2 pt-2">
         <div class="setting-item">
           <span>{{ t('settings.lyricSettings.pureMode') }}</span>
           <input type="checkbox" v-model="config.pureModeEnabled" class="toggle-switch" />
@@ -115,6 +115,23 @@
             <span>{{ t('settings.lyricSettings.letterSpacingMarks.compact') }}</span>
             <span>{{ t('settings.lyricSettings.letterSpacingMarks.default') }}</span>
             <span>{{ t('settings.lyricSettings.letterSpacingMarks.loose') }}</span>
+          </div>
+        </div>
+
+        <div class="slider-group">
+          <label class="slider-label">{{ t('settings.lyricSettings.fontWeight') }}</label>
+          <input
+            type="range"
+            v-model.number="config.fontWeight"
+            min="100"
+            max="900"
+            step="100"
+            class="slider-emerald"
+          />
+          <div class="slider-marks">
+            <span>{{ t('settings.lyricSettings.fontWeightMarks.thin') }}</span>
+            <span>{{ t('settings.lyricSettings.fontWeightMarks.normal') }}</span>
+            <span>{{ t('settings.lyricSettings.fontWeightMarks.bold') }}</span>
           </div>
         </div>
 
@@ -241,8 +258,7 @@
           <button
             v-if="config.gradientColors.colors.length < 5"
             @click="addGradientColor"
-            class="w-full py-2 px-4 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-            style="color: var(--text-color-active)"
+            class="w-full py-2 px-4 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors text-sm font-medium flex items-center justify-center gap-2 text-white/90"
           >
             <i class="ri-add-line"></i>
             {{ t('settings.lyricSettings.background.addColor') }}
@@ -277,8 +293,7 @@
           />
           <button
             @click="fileInput?.click()"
-            class="w-full py-2 px-4 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-            style="color: var(--text-color-active)"
+            class="w-full py-2 px-4 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors text-sm font-medium flex items-center justify-center gap-2 text-white/90"
           >
             <i class="ri-image-add-line"></i>
             {{ t('settings.lyricSettings.background.imageUpload') }}
@@ -338,7 +353,7 @@
             </div>
           </div>
 
-          <p class="text-xs" style="color: var(--text-color-primary); opacity: 0.5">
+          <p class="text-xs text-white/50">
             {{ t('settings.lyricSettings.background.fileSizeLimit') }}
           </p>
         </div>
@@ -352,10 +367,9 @@
             v-model="config.customCss"
             :placeholder="t('settings.lyricSettings.background.customCssPlaceholder')"
             rows="4"
-            class="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono"
-            style="color: var(--text-color-primary)"
+            class="w-full px-3 py-2 bg-black/20 border border-white/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 font-mono text-white/90"
           ></textarea>
-          <p class="text-xs" style="color: var(--text-color-primary); opacity: 0.5">
+          <p class="text-xs text-white/50">
             {{ t('settings.lyricSettings.background.customCssHelp') }}
           </p>
         </div>
@@ -464,6 +478,10 @@ watch(
 const updateCSSVariables = (config: LyricConfig) => {
   document.documentElement.style.setProperty('--lyric-font-size', `${config.fontSize}px`);
   document.documentElement.style.setProperty('--lyric-letter-spacing', `${config.letterSpacing}px`);
+  document.documentElement.style.setProperty(
+    '--lyric-font-weight',
+    config.fontWeight?.toString() || '400'
+  );
   document.documentElement.style.setProperty('--lyric-line-height', config.lineHeight.toString());
 };
 
@@ -486,13 +504,13 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   transition: all 0.2s;
-  font-size: 14px;
-  color: var(--text-color-primary);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .setting-item:hover {
@@ -533,21 +551,21 @@ defineExpose({
 
 /* 滑块组 */
 .slider-group {
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
 }
 
 .slider-label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-color-primary);
-  opacity: 0.7;
-  margin-bottom: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  opacity: 0.8;
+  margin-bottom: 8px;
 }
 
 .slider-emerald {
@@ -584,7 +602,7 @@ defineExpose({
   justify-content: space-between;
   margin-top: 8px;
   font-size: 11px;
-  color: var(--text-color-primary);
+  color: rgba(255, 255, 255, 0.8);
   opacity: 0.5;
 }
 
@@ -602,7 +620,7 @@ defineExpose({
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-color-primary);
+  color: rgba(255, 255, 255, 0.8);
   opacity: 0.7;
   margin-bottom: 12px;
 }
@@ -615,7 +633,7 @@ defineExpose({
   cursor: pointer;
   transition: all 0.2s;
   font-size: 14px;
-  color: var(--text-color-primary);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .radio-item:hover {
@@ -632,7 +650,7 @@ defineExpose({
   cursor: pointer;
   transition: all 0.2s;
   font-size: 13px;
-  color: var(--text-color-primary);
+  color: rgba(255, 255, 255, 0.8);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -685,7 +703,7 @@ defineExpose({
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-color-primary);
+  color: rgba(255, 255, 255, 0.8);
   opacity: 0.7;
   margin-bottom: 12px;
 }
@@ -741,7 +759,7 @@ defineExpose({
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-color-primary);
+  color: rgba(255, 255, 255, 0.8);
   opacity: 0.7;
   margin-bottom: 12px;
 }
@@ -752,7 +770,7 @@ defineExpose({
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  color: var(--text-color-primary);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 14px;
   cursor: pointer;
   outline: none;

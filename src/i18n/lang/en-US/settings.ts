@@ -273,6 +273,12 @@ export default {
       medium: 'Medium',
       large: 'Large'
     },
+    fontWeight: 'Font Weight',
+    fontWeightMarks: {
+      thin: 'Thin',
+      normal: 'Normal',
+      bold: 'Bold'
+    },
     letterSpacing: 'Letter Spacing',
     letterSpacingMarks: {
       compact: 'Compact',
