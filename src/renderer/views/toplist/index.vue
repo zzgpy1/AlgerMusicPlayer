@@ -28,11 +28,6 @@
           <div class="toplist-item-desc">{{ item.updateFrequency || '' }}</div>
         </div>
       </div>
-      <!-- 加载状态 -->
-      <div v-if="loading" class="loading-more">
-        <n-spin size="small" />
-        <span class="ml-2">加载中...</span>
-      </div>
     </n-scrollbar>
   </div>
 </template>
@@ -162,11 +157,6 @@ onMounted(() => {
     @apply mt-1 text-xs line-clamp-1;
     @apply text-gray-500 dark:text-gray-400;
   }
-}
-
-.loading-more {
-  @apply flex justify-center items-center py-4;
-  @apply text-gray-500 dark:text-gray-400;
 }
 
 .mobile {
