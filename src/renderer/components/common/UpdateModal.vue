@@ -241,7 +241,8 @@ const handleUpdate = async () => {
       ia32: `https://github.com/algerkong/AlgerMusicPlayer/releases/download/v${version}/AlgerMusicPlayer-${version}-win-ia32.exe`
     },
     darwin: {
-      all: `https://github.com/algerkong/AlgerMusicPlayer/releases/download/v${version}AlgerMusicPlayer-${version}-mac-universal.dmg`
+      x64: `https://github.com/algerkong/AlgerMusicPlayer/releases/download/v${version}/AlgerMusicPlayer-${version}-x64.dmg`,
+      arm64: `https://github.com/algerkong/AlgerMusicPlayer/releases/download/v${version}/AlgerMusicPlayer-${version}-arm64.dmg`
     },
     linux: {
       AppImage: `https://github.com/algerkong/AlgerMusicPlayer/releases/download/v${version}/AlgerMusicPlayer-${version}-linux-x64.AppImage`,
@@ -253,9 +254,12 @@ const handleUpdate = async () => {
 
   // 根据平台和架构选择对应的安装包
   if (platform === 'darwin') {
-    // macOS
-    const macAsset = assets.find((asset) => asset.name.includes('mac'));
-    downloadUrl = macAsset?.browser_download_url || downUrls.darwin.all || '';
+    // macOS - 根据芯片架构选择对应的 DMG
+    const macArch = arch === 'arm64' ? 'arm64' : 'x64';
+    const macAsset = assets.find(
+      (asset) => asset.name.includes('mac') && asset.name.includes(macArch)
+    );
+    downloadUrl = macAsset?.browser_download_url || downUrls.darwin[macArch] || '';
   } else if (platform === 'win32') {
     // Windows
     const winAsset = assets.find(
