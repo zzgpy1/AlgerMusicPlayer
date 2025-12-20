@@ -41,7 +41,21 @@ export default {
     uidLoginFailed: 'UID登入失敗，請檢查使用者ID是否正確',
     autoGetCookieSuccess: '自動取得Cookie成功',
     autoGetCookieFailed: '自動取得Cookie失敗',
-    autoGetCookieTip: '將開啟網易雲音樂登入頁面，請完成登入後關閉視窗'
+    autoGetCookieTip: '將開啟網易雲音樂登入頁面，請完成登入後關閉視窗',
+    loginFailed: '登入失敗',
+    phoneRequired: '請輸入手機號',
+    passwordRequired: '請輸入密碼',
+    phoneLoginFailed: '手機號登入失敗，請檢查手機號和密碼是否正確',
+    qrCheckFailed: '檢查二維碼狀態失敗，請刷新重試',
+    qrLoading: '正在載入二維碼...',
+    qrExpired: '二維碼已過期，請點擊刷新',
+    qrExpiredShort: '二維碼已過期',
+    qrExpiredWarning: '二維碼已過期，請點擊刷新獲取新的二維碼',
+    qrScanned: '已掃碼，請在手機上確認登入',
+    qrScannedShort: '已掃碼',
+    qrScannedInfo: '已扫码，请在手机上确认登录',
+    qrConfirmed: '登入成功，正在跳轉...',
+    qrGenerating: '正在生成二維碼...'
   },
   qrTitle: '掃碼登入網易雲音樂',
   uidWarning: '注意：UID登入僅用於查看使用者公開資訊，無法訪問需要登入權限的功能'

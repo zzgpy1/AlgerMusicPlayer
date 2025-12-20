@@ -116,6 +116,33 @@ export default {
         imported: 'カスタム音源インポート済み',
         notImported: '未インポート'
       }
+    },
+    lxMusic: {
+      tabs: {
+        sources: '音源選択',
+        lxMusic: '落雪音源',
+        customApi: 'カスタムAPI'
+      },
+      scripts: {
+        title: 'インポート済みのスクリプト',
+        importLocal: 'ローカルインポート',
+        importOnline: 'オンラインインポート',
+        urlPlaceholder: '落雪音源スクリプトのURLを入力',
+        importBtn: 'インポート',
+        empty: 'インポート済みの落雪音源はありません',
+        notConfigured: '未設定（落雪音源タブで設定してください）',
+        importHint: '互換性のあるカスタムAPIプラグインをインポートして音源を拡張します',
+        noScriptWarning: '先に落雪音源スクリプトをインポートしてください',
+        noSelectionWarning: '先に落雪音源を選択してください',
+        notFound: '音源が存在しません',
+        switched: '音源を切り替えました: {name}',
+        deleted: '音源を削除しました: {name}',
+        enterUrl: 'スクリプトURLを入力してください',
+        invalidUrl: '無効なURL形式',
+        invalidScript: '無効な落雪音源スクリプトです（globalThis.lxが見つかりません）',
+        nameRequired: '名前を空にすることはできません',
+        renameSuccess: '名前を変更しました'
+      }
     }
   },
   application: {
@@ -245,6 +272,12 @@ export default {
       medium: '中',
       large: '大'
     },
+    fontWeight: 'フォントの太さ',
+    fontWeightMarks: {
+      thin: '細い',
+      normal: '通常',
+      bold: '太い'
+    },
     letterSpacing: '文字間隔',
     letterSpacingMarks: {
       compact: 'コンパクト',
@@ -280,7 +313,7 @@ export default {
         solid: '単色',
         gradient: 'グラデーション',
         image: '画像',
-        css: 'カスタム CSS'
+        css: 'CSS'
       },
       solidColor: '色を選択',
       presetColors: 'プリセットカラー',

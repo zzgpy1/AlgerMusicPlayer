@@ -24,6 +24,7 @@ export default {
     tokenStatus: '目前Cookie狀態',
     tokenSet: '已設定',
     tokenNotSet: '未設定',
+    setToken: '設定Cookie',
     setCookie: '設定Cookie',
     modifyToken: '修改Cookie',
     clearToken: '清除Cookie',
@@ -112,6 +113,33 @@ export default {
       status: {
         imported: '已匯入自訂音源',
         notImported: '未匯入'
+      }
+    },
+    lxMusic: {
+      tabs: {
+        sources: '音源選擇',
+        lxMusic: '落雪音源',
+        customApi: '自訂API'
+      },
+      scripts: {
+        title: '已匯入的音源腳本',
+        importLocal: '本機匯入',
+        importOnline: '線上匯入',
+        urlPlaceholder: '輸入落雪音源腳本 URL',
+        importBtn: '匯入',
+        empty: '暫無已匯入的落雪音源',
+        notConfigured: '未設定 (請至落雪音源分頁設定)',
+        importHint: '匯入相容的自訂 API 外掛以擴充音源',
+        noScriptWarning: '請先匯入落雪音源腳本',
+        noSelectionWarning: '請先選擇一個落雪音源',
+        notFound: '音源不存在',
+        switched: '已切換到音源: {name}',
+        deleted: '已刪除音源: {name}',
+        enterUrl: '請輸入腳本 URL',
+        invalidUrl: '無效的 URL 格式',
+        invalidScript: '無效的落雪音源腳本，未找到 globalThis.lx 相關程式碼',
+        nameRequired: '名稱不能為空',
+        renameSuccess: '重新命名成功'
       }
     }
   },
@@ -240,6 +268,12 @@ export default {
       medium: '中',
       large: '大'
     },
+    fontWeight: '字體粗細',
+    fontWeightMarks: {
+      thin: '細',
+      normal: '常規',
+      bold: '粗'
+    },
     letterSpacing: '字間距',
     letterSpacingMarks: {
       compact: '緊湊',
@@ -275,7 +309,7 @@ export default {
         solid: '純色',
         gradient: '漸層',
         image: '圖片',
-        css: '自訂 CSS'
+        css: 'CSS'
       },
       solidColor: '選擇顏色',
       presetColors: '預設顏色',

@@ -40,9 +40,13 @@ export default {
   },
   viewMore: 'View More',
   noMore: 'No more',
+  selectAll: 'Select All',
   expand: 'Expand',
   collapse: 'Collapse',
   songCount: '{count} songs',
+  language: 'Language',
+  today: 'Today',
+  yesterday: 'Yesterday',
   tray: {
     show: 'Show',
     quit: 'Quit',
@@ -52,6 +56,5 @@ export default {
     pause: 'Pause',
     play: 'Play',
     favorite: 'Favorite'
-  },
-  language: 'Language'
+  }
 };

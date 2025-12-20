@@ -119,7 +119,11 @@ export default {
     addToPlaylist: 'Add to Playlist',
     addToPlaylistSuccess: 'Add to Playlist Success',
     operationFailed: 'Operation Failed',
-    songsAlreadyInPlaylist: 'Songs already in playlist'
+    songsAlreadyInPlaylist: 'Songs already in playlist',
+    historyRecommend: 'Daily History',
+    fetchDatesFailed: 'Failed to fetch dates',
+    fetchSongsFailed: 'Failed to fetch songs',
+    noSongs: 'No songs'
   },
   playlist: {
     import: {

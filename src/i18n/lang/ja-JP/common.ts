@@ -43,6 +43,8 @@ export default {
   collapse: '折りたたみ',
   songCount: '{count}曲',
   language: '言語',
+  today: '今日',
+  yesterday: '昨日',
   tray: {
     show: '表示',
     quit: '終了',

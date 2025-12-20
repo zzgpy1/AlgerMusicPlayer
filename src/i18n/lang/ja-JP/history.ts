@@ -8,6 +8,13 @@ export default {
     local: 'ローカル記録',
     cloud: 'クラウド記録'
   },
+  categoryTabs: {
+    songs: '楽曲',
+    playlists: 'プレイリスト',
+    albums: 'アルバム'
+  },
+  noDescription: '説明なし',
+  noData: '記録なし',
   getCloudRecordFailed: 'クラウド記録の取得に失敗しました',
   needLogin: 'cookieを使用してログインしてクラウド記録を表示できます',
   merging: '記録を統合中...',

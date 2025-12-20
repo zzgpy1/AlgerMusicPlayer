@@ -311,7 +311,7 @@ export default {
         solid: '纯色',
         gradient: '渐变',
         image: '图片',
-        css: '自定义 CSS'
+        css: 'CSS'
       },
       solidColor: '选择颜色',
       presetColors: '预设颜色',

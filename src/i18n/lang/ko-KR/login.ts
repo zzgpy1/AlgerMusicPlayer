@@ -42,7 +42,21 @@ export default {
     autoGetCookieSuccess: 'Cookie 자동 가져오기 성공',
     autoGetCookieFailed: 'Cookie 자동 가져오기 실패',
     autoGetCookieTip:
-      '넷이즈 클라우드 뮤직 로그인 페이지를 열겠습니다. 로그인 완료 후 창을 닫아주세요'
+      '넷이즈 클라우드 뮤직 로그인 페이지를 열겠습니다. 로그인 완료 후 창을 닫아주세요',
+    loginFailed: '로그인 실패',
+    phoneRequired: '휴대폰 번호를 입력하세요',
+    passwordRequired: '비밀번호를 입력하세요',
+    phoneLoginFailed: '휴대폰 번호 로그인 실패, 휴대폰 번호와 비밀번호가 올바른지 확인하세요',
+    qrCheckFailed: 'QR코드 상태 확인 실패, 새로고침하여 다시 시도하세요',
+    qrLoading: 'QR코드 로딩 중...',
+    qrExpired: 'QR코드가 만료되었습니다. 클릭하여 새로고침하세요',
+    qrExpiredShort: 'QR코드 만료됨',
+    qrExpiredWarning: 'QR코드가 만료되었습니다. 클릭하여 새로운 QR코드를 받으세요',
+    qrScanned: 'QR코드가 스캔되었습니다. 휴대폰에서 로그인을 확인하세요',
+    qrScannedShort: '스캔됨',
+    qrScannedInfo: 'QR코드가 스캔되었습니다. 휴대폰에서 로그인을 확인하세요',
+    qrConfirmed: '로그인 성공, 리다이렉트 중...',
+    qrGenerating: 'QR코드를 생성 중...'
   },
   qrTitle: '넷이즈 클라우드 뮤직 QR코드 로그인',
   uidWarning:

@@ -314,7 +314,7 @@ export default {
         solid: 'Solid',
         gradient: 'Gradient',
         image: 'Image',
-        css: 'Custom CSS'
+        css: 'CSS'
       },
       solidColor: 'Select Color',
       presetColors: 'Preset Colors',

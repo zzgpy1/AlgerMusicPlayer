@@ -118,7 +118,11 @@ export default {
     cancelCollect: '수집 취소',
     addToPlaylist: '재생 목록에 추가',
     addToPlaylistSuccess: '재생 목록에 추가 성공',
-    songsAlreadyInPlaylist: '곡이 이미 재생 목록에 있습니다'
+    songsAlreadyInPlaylist: '곡이 이미 재생 목록에 있습니다',
+    historyRecommend: '일일 기록 권장',
+    fetchDatesFailed: '날짜를 가져오지 못했습니다',
+    fetchSongsFailed: '곡을 가져오지 못했습니다',
+    noSongs: '노래 없음'
   },
   playlist: {
     import: {

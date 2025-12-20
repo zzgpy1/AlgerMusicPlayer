@@ -119,7 +119,11 @@ export default {
     cancelCollect: 'お気に入りから削除',
     addToPlaylist: 'プレイリストに追加',
     addToPlaylistSuccess: 'プレイリストに追加しました',
-    songsAlreadyInPlaylist: '楽曲は既にプレイリストに存在します'
+    songsAlreadyInPlaylist: '楽曲は既にプレイリストに存在します',
+    historyRecommend: '履歴の日次推薦',
+    fetchDatesFailed: '日付リストの取得に失敗しました',
+    fetchSongsFailed: '楽曲リストの取得に失敗しました',
+    noSongs: '楽曲がありません'
   },
   playlist: {
     import: {

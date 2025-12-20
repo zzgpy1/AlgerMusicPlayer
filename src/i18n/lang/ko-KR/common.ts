@@ -43,6 +43,8 @@ export default {
   collapse: '접기',
   songCount: '{count}곡',
   language: '언어',
+  today: '오늘',
+  yesterday: '어제',
   tray: {
     show: '표시',
     quit: '종료',

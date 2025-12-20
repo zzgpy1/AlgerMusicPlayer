@@ -43,6 +43,8 @@ export default {
   collapse: '收合',
   songCount: '{count}首',
   language: '語言',
+  today: '今天',
+  yesterday: '昨天',
   tray: {
     show: '顯示',
     quit: '退出',

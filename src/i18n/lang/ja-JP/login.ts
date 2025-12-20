@@ -42,7 +42,22 @@ export default {
     autoGetCookieSuccess: 'Cookie自動取得成功',
     autoGetCookieFailed: 'Cookie自動取得失敗',
     autoGetCookieTip:
-      'NetEase Cloud Musicのログインページを開きます。ログイン完了後、ウィンドウを閉じてください'
+      'NetEase Cloud Musicのログインページを開きます。ログイン完了後、ウィンドウを閉じてください',
+    loginFailed: 'ログイン失敗',
+    phoneRequired: '電話番号を入力してください',
+    passwordRequired: 'パスワードを入力してください',
+    phoneLoginFailed:
+      '電話番号でのログインに失敗しました。電話番号とパスワードが正しいか確認してください',
+    qrCheckFailed: 'QRコードの状態確認に失敗しました。リフレッシュして再試行してください',
+    qrLoading: 'QRコードを読み込み中...',
+    qrExpired: 'QRコードの期限が切れました。クリックしてリフレッシュしてください',
+    qrExpiredShort: 'QRコード期限切れ',
+    qrExpiredWarning: 'QRコードの期限が切れました。クリックして新しいQRコードを取得してください',
+    qrScanned: 'QRコードがスキャンされました。スマートフォンでログインを確認してください',
+    qrScannedShort: 'スキャン済み',
+    qrScannedInfo: 'QRコードがスキャンされました。スマートフォンでログインを確認してください',
+    qrConfirmed: 'ログイン成功、リダイレクト中...',
+    qrGenerating: 'QRコードを生成中...'
   },
   qrTitle: 'NetEase Cloud Music QRコードログイン',
   uidWarning:

@@ -8,6 +8,13 @@ export default {
     local: '로컬 기록',
     cloud: '클라우드 기록'
   },
+  categoryTabs: {
+    songs: '곡',
+    playlists: '플레이리스트',
+    albums: '앨범'
+  },
+  noDescription: '설명 없음',
+  noData: '기록 없음',
   getCloudRecordFailed: '클라우드 기록 가져오기 실패',
   needLogin: 'cookie를 사용하여 로그인하여 클라우드 기록을 볼 수 있습니다',
   merging: '기록 병합 중...',

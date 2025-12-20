@@ -117,6 +117,33 @@ export default {
         imported: '사용자 지정 음원 가져옴',
         notImported: '가져오지 않음'
       }
+    },
+    lxMusic: {
+      tabs: {
+        sources: '음원 선택',
+        lxMusic: '낙설 음원',
+        customApi: '사용자 정의 API'
+      },
+      scripts: {
+        title: '가져온 스크립트',
+        importLocal: '로컬 가져오기',
+        importOnline: '온라인 가져오기',
+        urlPlaceholder: '낙설 음원 스크립트 URL 입력',
+        importBtn: '가져오기',
+        empty: '가져온 낙설 음원이 없습니다',
+        notConfigured: '설정되지 않음 (낙설 음원 탭에서 설정하세요)',
+        importHint: '소스 확장을 위해 호환되는 사용자 정의 API 플러그인을 가져옵니다',
+        noScriptWarning: '먼저 낙설 음원 스크립트를 가져오세요',
+        noSelectionWarning: '먼저 낙설 음원 소스를 선택하세요',
+        notFound: '음원이 존재하지 않습니다',
+        switched: '음원으로 전환되었습니다: {name}',
+        deleted: '음원이 삭제되었습니다: {name}',
+        enterUrl: '스크립트 URL을 입력하세요',
+        invalidUrl: '유효하지 않은 URL 형식',
+        invalidScript: '유효하지 않은 낙설 음원 스크립트입니다 (globalThis.lx 코드를 찾을 수 없음)',
+        nameRequired: '이름은 비워둘 수 없습니다',
+        renameSuccess: '이름이 변경되었습니다'
+      }
     }
   },
   application: {
@@ -246,6 +273,12 @@ export default {
       medium: '중간',
       large: '큼'
     },
+    fontWeight: '글꼴 두께',
+    fontWeightMarks: {
+      thin: '가늘게',
+      normal: '보통',
+      bold: '굵게'
+    },
     letterSpacing: '글자 간격',
     letterSpacingMarks: {
       compact: '좁음',
@@ -281,7 +314,7 @@ export default {
         solid: '단색',
         gradient: '그라데이션',
         image: '이미지',
-        css: '사용자 정의 CSS'
+        css: 'CSS'
       },
       solidColor: '색상 선택',
       presetColors: '프리셋 색상',
