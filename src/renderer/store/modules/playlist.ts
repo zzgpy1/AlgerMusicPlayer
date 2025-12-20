@@ -398,7 +398,12 @@ export const usePlaylistStore = defineStore(
         console.log(
           `[nextPlay] 尝试播放: ${nextSong.name}, 索引: ${currentIndex} -> ${nowPlayListIndex}, 单曲重试: ${singleTrackRetryCount}/${SINGLE_TRACK_MAX_RETRIES}, 连续失败: ${consecutiveFailCount.value}/${MAX_CONSECUTIVE_FAILS}`
         );
-        console.log('[nextPlay] Current mode:', playMode.value, 'Playlist length:', playList.value.length);
+        console.log(
+          '[nextPlay] Current mode:',
+          playMode.value,
+          'Playlist length:',
+          playList.value.length
+        );
 
         // 先尝试播放歌曲
         const success = await playerCore.handlePlayMusic(nextSong, true);
@@ -408,7 +413,10 @@ export const usePlaylistStore = defineStore(
           consecutiveFailCount.value = 0;
           playListIndex.value = nowPlayListIndex;
           console.log(`[nextPlay] 播放成功，索引已更新为: ${nowPlayListIndex}`);
-          console.log('[nextPlay] New current song in list:', playList.value[playListIndex.value]?.name);
+          console.log(
+            '[nextPlay] New current song in list:',
+            playList.value[playListIndex.value]?.name
+          );
           sleepTimerStore.handleSongChange();
         } else {
           console.error(`[nextPlay] 播放失败: ${nextSong.name}`);
@@ -568,7 +576,8 @@ export const usePlaylistStore = defineStore(
             const sound = audioService.getCurrentSound();
             if (sound) {
               sound.play();
-              // checkPlaybackState 已在 playAudio 中自动调用，无需在这里重复调用
+              // 在恢复播放时也进行状态检测，防止URL已过期导致无声
+              playerCore.checkPlaybackState(playerCore.playMusic);
             }
           }
           return;

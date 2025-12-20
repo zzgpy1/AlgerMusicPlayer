@@ -103,15 +103,18 @@ export const usePlayerCoreStore = defineStore(
     /**
      * 播放状态检测
      */
-    const checkPlaybackState = (song: SongResult, requestId: string, timeout: number = 4000) => {
+    const checkPlaybackState = (song: SongResult, requestId?: string, timeout: number = 4000) => {
       if (checkPlayTime) {
         clearTimeout(checkPlayTime);
       }
       const sound = audioService.getCurrentSound();
       if (!sound) return;
 
+      // 如果没有提供 requestId，创建一个临时标识
+      const actualRequestId = requestId || `check_${Date.now()}`;
+
       const onPlayHandler = () => {
-        console.log('播放事件触发，歌曲成功开始播放');
+        console.log(`[${actualRequestId}] 播放事件触发，歌曲成功开始播放`);
         audioService.off('play', onPlayHandler);
         audioService.off('playerror', onPlayErrorHandler);
       };
@@ -121,13 +124,14 @@ export const usePlayerCoreStore = defineStore(
         audioService.off('play', onPlayHandler);
         audioService.off('playerror', onPlayErrorHandler);
 
-        // 验证请求是否仍然有效
-        if (!playbackRequestManager.isRequestValid(requestId)) {
+        // 如果有 requestId，验证其有效性
+        if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
           console.log('请求已过期，跳过重试');
           return;
         }
 
         if (userPlayIntent.value && play.value) {
+          console.log('播放失败，尝试刷新URL并重新播放');
           playMusic.value.playMusicUrl = undefined;
           const refreshedSong = { ...song, isFirstPlay: true };
           await handlePlayMusic(refreshedSong, true);
@@ -138,8 +142,8 @@ export const usePlayerCoreStore = defineStore(
       audioService.on('playerror', onPlayErrorHandler);
 
       checkPlayTime = setTimeout(() => {
-        // 验证请求是否仍然有效
-        if (!playbackRequestManager.isRequestValid(requestId)) {
+        // 如果有 requestId，验证其有效性
+        if (requestId && !playbackRequestManager.isRequestValid(requestId)) {
           console.log('请求已过期，跳过超时重试');
           audioService.off('play', onPlayHandler);
           audioService.off('playerror', onPlayErrorHandler);
