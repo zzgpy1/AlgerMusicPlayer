@@ -143,6 +143,12 @@ export function initializeWindowManager() {
     }
   });
 
+  // 强制退出应用（用于免责声明拒绝等场景）
+  ipcMain.on('quit-app', () => {
+    setAppQuitting(true);
+    app.quit();
+  });
+
   ipcMain.on('mini-tray', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) {

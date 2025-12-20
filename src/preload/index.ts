@@ -6,6 +6,7 @@ const api = {
   minimize: () => ipcRenderer.send('minimize-window'),
   maximize: () => ipcRenderer.send('maximize-window'),
   close: () => ipcRenderer.send('close-window'),
+  quitApp: () => ipcRenderer.send('quit-app'),
   dragStart: (data) => ipcRenderer.send('drag-start', data),
   miniTray: () => ipcRenderer.send('mini-tray'),
   miniWindow: () => ipcRenderer.send('mini-window'),
@@ -61,11 +62,8 @@ const api = {
   getSearchSuggestions: (keyword: string) => ipcRenderer.invoke('get-search-suggestions', keyword),
 
   // 落雪音乐 HTTP 请求（绕过 CORS）
-  lxMusicHttpRequest: (request: {
-    url: string;
-    options: any;
-    requestId: string;
-  }) => ipcRenderer.invoke('lx-music-http-request', request),
+  lxMusicHttpRequest: (request: { url: string; options: any; requestId: string }) =>
+    ipcRenderer.invoke('lx-music-http-request', request),
 
   lxMusicHttpCancel: (requestId: string) => ipcRenderer.invoke('lx-music-http-cancel', requestId)
 };

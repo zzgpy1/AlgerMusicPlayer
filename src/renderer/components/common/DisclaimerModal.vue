@@ -237,6 +237,7 @@ import { useI18n } from 'vue-i18n';
 // 导入收款码图片
 import alipayQRCode from '@/assets/alipay.png';
 import wechatQRCode from '@/assets/wechat.png';
+import { isElectron, isLyricWindow } from '@/utils';
 
 const { t } = useI18n();
 
@@ -250,20 +251,8 @@ const qrcodeType = ref<'wechat' | 'alipay'>('wechat');
 const isTransitioning = ref(false); // 防止用户点击过快
 
 // 检查是否需要显示免责声明
-const shouldShowDisclaimer = (): boolean => {
-  const agreedTime = localStorage.getItem(DISCLAIMER_AGREED_KEY);
-
-  // 从未同意过
-  if (!agreedTime) return true;
-
-  const savedTime = parseInt(agreedTime, 10);
-  const now = Date.now();
-
-  // 随机 3-10 天后再次显示
-  const randomDays = Math.floor(Math.random() * 8) + 3; // 3-10 天
-  const intervalMs = randomDays * 24 * 60 * 60 * 1000;
-
-  return now - savedTime >= intervalMs;
+const shouldShowDisclaimer = () => {
+  return !localStorage.getItem(DISCLAIMER_AGREED_KEY);
 };
 
 // 处理同意
@@ -278,13 +267,18 @@ const handleAgree = () => {
   }, 300);
 };
 
-// 处理不同意 - 关闭窗口
+// 处理不同意 - 退出应用
 const handleDisagree = () => {
   if (isTransitioning.value) return;
   isTransitioning.value = true;
 
-  // Web 环境下尝试关闭窗口
-  window.close();
+  if (isElectron) {
+    // Electron 环境下强制退出应用
+    window.api?.quitApp?.();
+  } else {
+    // Web 环境下尝试关闭窗口
+    window.close();
+  }
   isTransitioning.value = false;
 };
 
@@ -316,6 +310,9 @@ const handleEnterApp = () => {
 };
 
 onMounted(() => {
+  // 歌词窗口不显示免责声明
+  if (isLyricWindow.value) return;
+
   // 检查是否需要显示免责声明
   if (shouldShowDisclaimer()) {
     showDisclaimer.value = true;

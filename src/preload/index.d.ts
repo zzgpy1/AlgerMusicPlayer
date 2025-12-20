@@ -4,6 +4,7 @@ interface API {
   minimize: () => void;
   maximize: () => void;
   close: () => void;
+  quitApp: () => void;
   dragStart: (data: any) => void;
   miniTray: () => void;
   miniWindow: () => void;
@@ -25,11 +26,7 @@ interface API {
   importLxMusicScript: () => Promise<{ name: string; content: string } | null>;
   invoke: (channel: string, ...args: any[]) => Promise<any>;
   getSearchSuggestions: (keyword: string) => Promise<any>;
-  lxMusicHttpRequest: (request: {
-    url: string;
-    options: any;
-    requestId: string;
-  }) => Promise<any>;
+  lxMusicHttpRequest: (request: { url: string; options: any; requestId: string }) => Promise<any>;
   lxMusicHttpCancel: (requestId: string) => Promise<void>;
 }
 
