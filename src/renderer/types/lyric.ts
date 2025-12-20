@@ -44,7 +44,7 @@ export const DEFAULT_LYRIC_CONFIG: LyricConfig = {
   hideMiniPlayBar: false,
   pureModeEnabled: false,
   hideLyrics: false,
-  contentWidth: 100, // 默认100%宽度
+  contentWidth: 75, // 默认100%宽度
   // 移动端默认配置
   mobileLayout: 'ios',
   mobileCoverStyle: 'full',

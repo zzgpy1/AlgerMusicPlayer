@@ -417,40 +417,27 @@ const setTextColors = (background: string) => {
   }
 };
 
-// 监听背景变化
+const targetBackground = computed(() => {
+  if (config.value.useCustomBackground && customBackgroundStyle.value) {
+    if (typeof customBackgroundStyle.value === 'string') {
+      return customBackgroundStyle.value;
+    }
+  }
+  if (config.value.theme !== 'default') {
+    return themeMusic[config.value.theme] || props.background;
+  }
+  return props.background;
+});
+
+// 监听目标背景变化并更新文字颜色
 watch(
-  () => props.background,
+  targetBackground,
   (newBg) => {
-    if (config.value.useCustomBackground) {
-      // 使用自定义背景时,根据自定义背景计算文字颜色
-      if (customBackgroundStyle.value) {
-        setTextColors(customBackgroundStyle.value);
-      }
-    } else if (config.value.theme === 'default') {
+    if (newBg) {
       setTextColors(newBg);
-    } else {
-      setTextColors(themeMusic[config.value.theme] || props.background);
     }
   },
   { immediate: true }
-);
-
-// 监听自定义背景配置变化
-watch(
-  () => [config.value.useCustomBackground, customBackgroundStyle.value] as const,
-  ([useCustom, customBg]) => {
-    if (useCustom && customBg && typeof customBg === 'string') {
-      setTextColors(customBg);
-    } else {
-      // 回退到主题模式
-      if (config.value.theme === 'default') {
-        setTextColors(props.background);
-      } else {
-        setTextColors(themeMusic[config.value.theme] || props.background);
-      }
-    }
-  },
-  { deep: true }
 );
 
 const { getLrcStyle: originalLrcStyle } = useLyricProgress();
@@ -589,15 +576,6 @@ watch(
   { immediate: true }
 );
 
-// 监听配置变化并保存到本地存储
-watch(
-  () => config.value,
-  (newConfig) => {
-    localStorage.setItem('music-full-config', JSON.stringify(newConfig));
-  },
-  { deep: true }
-);
-
 // 监听滚动事件
 const handleScroll = () => {
   if (!lrcSider.value || !config.value.hideCover) return;
@@ -675,16 +653,6 @@ watch(
   (newWeight) => {
     document.documentElement.style.setProperty('--lyric-font-weight', newWeight.toString());
   }
-);
-
-// 监听主题变化
-watch(
-  () => config.value.theme,
-  (newTheme) => {
-    const newBackground = themeMusic[newTheme] || props.background;
-    setTextColors(newBackground);
-  },
-  { immediate: true }
 );
 
 // 添加文字间距监听

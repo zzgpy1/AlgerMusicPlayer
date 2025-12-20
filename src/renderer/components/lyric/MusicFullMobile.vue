@@ -979,14 +979,19 @@ const setTextColors = (background: string) => {
   }
 };
 
-// 监听背景变化
+const targetBackground = computed(() => {
+  if (config.value.theme !== 'default') {
+    return themeMusic[config.value.theme] || props.background;
+  }
+  return props.background;
+});
+
+// 监听目标背景变化并更新文字颜色
 watch(
-  () => props.background,
+  targetBackground,
   (newBg) => {
-    if (config.value.theme === 'default') {
+    if (newBg) {
       setTextColors(newBg);
-    } else {
-      setTextColors(themeMusic[config.value.theme] || props.background);
     }
   },
   { immediate: true }
@@ -1039,16 +1044,6 @@ const closeMusicFull = () => {
   isVisible.value = false;
   playerStore.setMusicFull(false);
 };
-
-// 监听主题变化
-watch(
-  () => config.value.theme,
-  (newTheme) => {
-    const newBackground = themeMusic[newTheme] || props.background;
-    setTextColors(newBackground);
-  },
-  { immediate: true }
-);
 
 // 添加对 playMusic.id 的监听，歌曲切换时滚动到顶部
 watch(
@@ -1116,7 +1111,9 @@ onMounted(() => {
 watch(isVisible, (newVal) => {
   if (newVal) {
     // 播放器显示时，重新设置背景颜色
-    setTextColors(props.background);
+    if (targetBackground.value) {
+      setTextColors(targetBackground.value);
+    }
   } else {
     showFullLyrics.value = false;
     if (autoScrollTimer.value) {
