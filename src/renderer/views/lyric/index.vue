@@ -401,6 +401,8 @@ watch(
       // 锁定时自动关闭主题色面板
       showThemeColorPanel.value = false;
     }
+    // 通知主进程，按需启停鼠标位置轮询
+    windowData.electron.ipcRenderer.send('set-lyric-lock-state', newLock);
   }
 );
 
@@ -794,6 +796,9 @@ onMounted(() => {
       }
     }
   );
+
+  // 同步初始锁定状态到主进程，使其按需启动鼠标位置轮询
+  windowData.electron.ipcRenderer.send('set-lyric-lock-state', lyricSetting.value.isLock);
 });
 
 onUnmounted(() => {

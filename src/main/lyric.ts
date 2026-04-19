@@ -10,8 +10,11 @@ let isDragging = false;
 
 // 添加窗口大小变化防护
 let originalSize = { width: 0, height: 0 };
+// 轮询只在 "锁定 + 窗口可见" 时启用：解锁状态下 DOM 事件足够，避免常驻 50ms 轮询
 let mousePresenceTimer: ReturnType<typeof setInterval> | null = null;
 let lastMouseInside: boolean | null = null;
+let isLyricLocked = false;
+let isLyricWindowVisible = false;
 
 const isPointInsideWindow = (
   point: { x: number; y: number },
@@ -57,6 +60,14 @@ const startMousePresenceTracking = () => {
     }
     emitMousePresence();
   }, 50);
+};
+
+const syncMousePresenceTracking = () => {
+  if (isLyricLocked && isLyricWindowVisible && lyricWindow && !lyricWindow.isDestroyed()) {
+    startMousePresenceTracking();
+  } else {
+    stopMousePresenceTracking();
+  }
 };
 
 const createWin = () => {
@@ -151,10 +162,30 @@ const createWin = () => {
   // 监听窗口关闭事件
   lyricWindow.on('closed', () => {
     stopMousePresenceTracking();
+    isLyricLocked = false;
+    isLyricWindowVisible = false;
     if (lyricWindow) {
       lyricWindow.destroy();
       lyricWindow = null;
     }
+  });
+
+  // 窗口可见性变化时同步轮询状态，避免最小化/隐藏时空转
+  lyricWindow.on('show', () => {
+    isLyricWindowVisible = true;
+    syncMousePresenceTracking();
+  });
+  lyricWindow.on('hide', () => {
+    isLyricWindowVisible = false;
+    stopMousePresenceTracking();
+  });
+  lyricWindow.on('minimize', () => {
+    isLyricWindowVisible = false;
+    stopMousePresenceTracking();
+  });
+  lyricWindow.on('restore', () => {
+    isLyricWindowVisible = true;
+    syncMousePresenceTracking();
   });
 
   // 监听窗口大小变化事件，保存新的尺寸
@@ -184,7 +215,6 @@ export const loadLyricWindow = (ipcMain: IpcMain, mainWin: BrowserWindow): void 
       }
       lyricWindow.focus();
       lyricWindow.show();
-      startMousePresenceTracking();
       return true;
     }
     return false;
@@ -219,7 +249,6 @@ export const loadLyricWindow = (ipcMain: IpcMain, mainWin: BrowserWindow): void 
     win.once('ready-to-show', () => {
       console.log('Lyric window ready to show');
       win.show();
-      startMousePresenceTracking();
     });
   });
 
@@ -248,13 +277,18 @@ export const loadLyricWindow = (ipcMain: IpcMain, mainWin: BrowserWindow): void 
 
   ipcMain.on('close-lyric', () => {
     if (lyricWindow && !lyricWindow.isDestroyed()) {
-      stopMousePresenceTracking();
       lyricWindow.webContents.send('lyric-window-close');
       mainWin.webContents.send('lyric-control-back', 'close');
       mainWin.webContents.send('lyric-window-closed');
       lyricWindow.destroy();
       lyricWindow = null;
     }
+  });
+
+  // 渲染端同步锁定状态 → 决定主进程是否需要轮询鼠标位置
+  ipcMain.on('set-lyric-lock-state', (_, isLocked: boolean) => {
+    isLyricLocked = isLocked;
+    syncMousePresenceTracking();
   });
 
   // 处理鼠标事件
