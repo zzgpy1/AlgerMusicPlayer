@@ -10,7 +10,7 @@ let isDragging = false;
 
 // 添加窗口大小变化防护
 let originalSize = { width: 0, height: 0 };
-// 轮询只在 "锁定 + 窗口可见" 时启用：解锁状态下 DOM 事件足够，避免常驻 50ms 轮询
+// 鼠标位置轮询仅在"锁定 + 可见"时启用，解锁态下 DOM 事件已足够
 let mousePresenceTimer: ReturnType<typeof setInterval> | null = null;
 let lastMouseInside: boolean | null = null;
 let isLyricLocked = false;
@@ -170,7 +170,6 @@ const createWin = () => {
     }
   });
 
-  // 窗口可见性变化时同步轮询状态，避免最小化/隐藏时空转
   lyricWindow.on('show', () => {
     isLyricWindowVisible = true;
     syncMousePresenceTracking();
@@ -285,9 +284,14 @@ export const loadLyricWindow = (ipcMain: IpcMain, mainWin: BrowserWindow): void 
     }
   });
 
-  // 渲染端同步锁定状态 → 决定主进程是否需要轮询鼠标位置
   ipcMain.on('set-lyric-lock-state', (_, isLocked: boolean) => {
     isLyricLocked = isLocked;
+    if (lyricWindow && !lyricWindow.isDestroyed()) {
+      // 锁定时禁用 resize，避免鼠标移到边缘仍显示调整光标
+      lyricWindow.setResizable(!isLocked);
+      // 设置初始穿透状态，后续 polling 会按实际位置纠正
+      lyricWindow.setIgnoreMouseEvents(isLocked, { forward: true });
+    }
     syncMousePresenceTracking();
   });
 
