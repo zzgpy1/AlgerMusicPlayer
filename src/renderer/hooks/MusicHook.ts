@@ -149,123 +149,124 @@ const parseLyricsString = async (
   }
 };
 
-// 设置音乐相关的监听器
+// 解析当前 playMusic.lyric 写入 lrcArray, 供 watcher / openLyric / onLyricWindowReady 共用
+const ensureLyricsLoaded = async (force = false) => {
+  const songId = playMusic.value?.id;
+  if (!songId) {
+    lrcArray.value = [];
+    lrcTimeArray.value = [];
+    nowIndex.value = 0;
+    return;
+  }
+  if (!force && lrcArray.value.length > 0) return;
+
+  await nextTick();
+
+  const lyricData = playMusic.value.lyric;
+  if (lyricData && typeof lyricData === 'string') {
+    const {
+      lrcArray: parsedLrcArray,
+      lrcTimeArray: parsedTimeArray,
+      hasWordByWord
+    } = await parseLyricsString(lyricData);
+    lrcArray.value = parsedLrcArray;
+    lrcTimeArray.value = parsedTimeArray;
+
+    if (playMusic.value.lyric && typeof playMusic.value.lyric === 'object') {
+      playMusic.value.lyric.hasWordByWord = hasWordByWord;
+    }
+  } else if (lyricData && typeof lyricData === 'object' && lyricData.lrcArray?.length > 0) {
+    const rawLrc = lyricData.lrcArray || [];
+    lrcTimeArray.value = lyricData.lrcTimeArray || [];
+
+    try {
+      const { translateLyrics } = await import('@/services/lyricTranslation');
+      lrcArray.value = await translateLyrics(rawLrc as any);
+    } catch (e) {
+      console.error('翻译歌词失败，使用原始歌词：', e);
+      lrcArray.value = rawLrc as any;
+    }
+  } else if (isElectron && playMusic.value.playMusicUrl?.startsWith('local:///')) {
+    try {
+      let filePath = decodeURIComponent(playMusic.value.playMusicUrl.replace('local:///', ''));
+      // 处理 Windows 路径：/C:/... → C:/...
+      if (/^\/[a-zA-Z]:\//.test(filePath)) {
+        filePath = filePath.slice(1);
+      }
+      const embeddedLyrics = await window.api.getEmbeddedLyrics(filePath);
+      if (embeddedLyrics) {
+        const {
+          lrcArray: parsedLrcArray,
+          lrcTimeArray: parsedTimeArray,
+          hasWordByWord
+        } = await parseLyricsString(embeddedLyrics);
+        lrcArray.value = parsedLrcArray;
+        lrcTimeArray.value = parsedTimeArray;
+        if (playMusic.value.lyric && typeof playMusic.value.lyric === 'object') {
+          (playMusic.value.lyric as any).hasWordByWord = hasWordByWord;
+        }
+      } else if (typeof songId === 'number') {
+        try {
+          const { getMusicLrc } = await import('@/api/music');
+          const res = await getMusicLrc(songId);
+          if (res?.data?.lrc?.lyric) {
+            const { lrcArray: apiLrcArray, lrcTimeArray: apiTimeArray } = await parseLyricsString(
+              res.data.lrc.lyric
+            );
+            lrcArray.value = apiLrcArray;
+            lrcTimeArray.value = apiTimeArray;
+          }
+        } catch (apiErr) {
+          console.error('API lyrics fallback failed:', apiErr);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to extract embedded lyrics:', err);
+    }
+  } else if (typeof songId === 'number') {
+    // 在线歌曲但 lyric 字段尚未加载, 主动调 API 兜底
+    try {
+      const { getMusicLrc } = await import('@/api/music');
+      const res = await getMusicLrc(songId);
+      if (res?.data?.lrc?.lyric) {
+        const { lrcArray: apiLrcArray, lrcTimeArray: apiTimeArray } = await parseLyricsString(
+          res.data.lrc.lyric
+        );
+        lrcArray.value = apiLrcArray;
+        lrcTimeArray.value = apiTimeArray;
+      }
+    } catch (apiErr) {
+      console.error('API lyrics fallback failed:', apiErr);
+    }
+  }
+
+  if (isElectron && isLyricWindowOpen.value) {
+    sendLyricToWin();
+    setTimeout(() => sendLyricToWin(), 500);
+  }
+};
+
 const setupMusicWatchers = () => {
   const store = getPlayerStore();
 
-  // 监听 playerStore.playMusic 的变化以更新歌词数据
+  // 切歌时 id 变化, 强制重新解析
   watch(
     () => store.playMusic.id,
     async (newId, oldId) => {
-      // 如果没有歌曲ID，清空歌词
-      if (!newId) {
-        lrcArray.value = [];
-        lrcTimeArray.value = [];
-        nowIndex.value = 0;
-        return;
-      }
-
-      // 避免相同ID的重复执行(但允许初始化时执行)
-      if (newId === oldId && lrcArray.value.length > 0) return;
-
-      // 歌曲切换时重置歌词索引
-      if (newId !== oldId) {
-        nowIndex.value = 0;
-      }
-
-      await nextTick(async () => {
-        console.log('歌曲切换，更新歌词数据');
-
-        // 检查是否有原始歌词字符串需要解析
-        const lyricData = playMusic.value.lyric;
-        if (lyricData && typeof lyricData === 'string') {
-          // 如果歌词是字符串格式，使用新的解析器
-          const {
-            lrcArray: parsedLrcArray,
-            lrcTimeArray: parsedTimeArray,
-            hasWordByWord
-          } = await parseLyricsString(lyricData);
-          lrcArray.value = parsedLrcArray;
-          lrcTimeArray.value = parsedTimeArray;
-
-          // 更新歌曲的歌词数据结构
-          if (playMusic.value.lyric && typeof playMusic.value.lyric === 'object') {
-            playMusic.value.lyric.hasWordByWord = hasWordByWord;
-          }
-        } else if (lyricData && typeof lyricData === 'object' && lyricData.lrcArray?.length > 0) {
-          // 使用现有的歌词数据结构
-          const rawLrc = lyricData.lrcArray || [];
-          lrcTimeArray.value = lyricData.lrcTimeArray || [];
-
-          try {
-            const { translateLyrics } = await import('@/services/lyricTranslation');
-            lrcArray.value = await translateLyrics(rawLrc as any);
-          } catch (e) {
-            console.error('翻译歌词失败，使用原始歌词：', e);
-            lrcArray.value = rawLrc as any;
-          }
-        } else if (isElectron && playMusic.value.playMusicUrl?.startsWith('local:///')) {
-          // 从下载/本地文件的 ID3/FLAC 元数据中提取嵌入歌词
-          try {
-            let filePath = decodeURIComponent(
-              playMusic.value.playMusicUrl.replace('local:///', '')
-            );
-            // 处理 Windows 路径：/C:/... → C:/...
-            if (/^\/[a-zA-Z]:\//.test(filePath)) {
-              filePath = filePath.slice(1);
-            }
-            const embeddedLyrics = await window.api.getEmbeddedLyrics(filePath);
-            if (embeddedLyrics) {
-              const {
-                lrcArray: parsedLrcArray,
-                lrcTimeArray: parsedTimeArray,
-                hasWordByWord
-              } = await parseLyricsString(embeddedLyrics);
-              lrcArray.value = parsedLrcArray;
-              lrcTimeArray.value = parsedTimeArray;
-              if (playMusic.value.lyric && typeof playMusic.value.lyric === 'object') {
-                (playMusic.value.lyric as any).hasWordByWord = hasWordByWord;
-              }
-            } else {
-              // 无嵌入歌词 — 若有数字 ID，尝试 API 兜底
-              const songId = playMusic.value.id;
-              if (songId && typeof songId === 'number') {
-                try {
-                  const { getMusicLrc } = await import('@/api/music');
-                  const res = await getMusicLrc(songId);
-                  if (res?.data?.lrc?.lyric) {
-                    const { lrcArray: apiLrcArray, lrcTimeArray: apiTimeArray } =
-                      await parseLyricsString(res.data.lrc.lyric);
-                    lrcArray.value = apiLrcArray;
-                    lrcTimeArray.value = apiTimeArray;
-                  }
-                } catch (apiErr) {
-                  console.error('API lyrics fallback failed:', apiErr);
-                }
-              }
-            }
-          } catch (err) {
-            console.error('Failed to extract embedded lyrics:', err);
-          }
-        } else {
-          // 无歌词数据
-          lrcArray.value = [];
-          lrcTimeArray.value = [];
-        }
-        // 当歌词数据更新时，如果歌词窗口打开，则发送数据
-        if (isElectron && isLyricWindowOpen.value) {
-          console.log('歌词窗口已打开，同步最新歌词数据');
-          // 不管歌词数组是否为空，都发送最新数据
-          sendLyricToWin();
-
-          // 再次延迟发送，确保歌词窗口已完全加载
-          setTimeout(() => {
-            sendLyricToWin();
-          }, 500);
-        }
-      });
+      if (newId !== oldId) nowIndex.value = 0;
+      await ensureLyricsLoaded(true);
     },
     { immediate: true }
+  );
+
+  // 同一首歌但 lyric 字段后到 (重启 + autoPlay 关闭场景)
+  watch(
+    () => playMusic.value?.lyric,
+    () => {
+      if (lrcArray.value.length === 0 && playMusic.value?.id) {
+        ensureLyricsLoaded();
+      }
+    }
   );
 };
 
@@ -486,7 +487,10 @@ const setupAudioListeners = () => {
     if (isElectron) {
       window.api.sendSong(cloneDeep(getPlayerStore().playMusic));
     }
-    // 启动进度更新
+    // 兜底: 重启后首次点播放时 lrcArray 仍为空则主动加载
+    if (lrcArray.value.length === 0 && playMusic.value?.id) {
+      ensureLyricsLoaded();
+    }
     startProgressInterval();
   });
 
@@ -893,28 +897,20 @@ const stopLyricSync = () => {
   }
 };
 
-// 修改openLyric函数，添加定时同步
-export const openLyric = () => {
+export const openLyric = async () => {
   if (!isElectron) return;
 
-  // 检查是否有播放中的歌曲
   if (!playMusic.value || !playMusic.value.id) {
     console.log('没有正在播放的歌曲，无法打开歌词窗口');
     return;
   }
 
-  console.log('Opening lyric window with current song:', playMusic.value?.name);
-
   isLyricWindowOpen.value = !isLyricWindowOpen.value;
   if (isLyricWindowOpen.value) {
-    // 立即打开窗口
     window.api.openLyric();
 
-    // 确保有歌词数据，如果没有，则使用默认的"无歌词"提示
+    // 先发"加载中"占位, 防止窗口启动期间显示"无歌词"
     if (!lrcArray.value || lrcArray.value.length === 0) {
-      // 如果当前播放的歌曲有ID但没有歌词，则尝试加载歌词
-      console.log('尝试加载歌词数据...');
-      // 发送默认的"无歌词"数据
       const emptyLyricData = {
         type: 'empty',
         nowIndex: 0,
@@ -928,12 +924,15 @@ export const openLyric = () => {
         playMusic: playMusic.value
       };
       window.api.sendLyric(JSON.stringify(emptyLyricData));
+
+      // 关键: 主动加载歌词, 不依赖 watcher
+      // (重启场景下 playerCore.playMusic 整体替换可能未触发 lyric watcher)
+      await ensureLyricsLoaded(true);
     } else {
-      // 发送完整歌词数据
       sendLyricToWin();
     }
 
-    // 延迟重发一次，以防窗口加载略慢
+    // 延迟重发, 防窗口加载慢丢消息
     setTimeout(() => {
       if (isLyricWindowOpen.value) {
         sendLyricToWin();
@@ -1055,11 +1054,13 @@ export const initAudioListeners = async () => {
       window.api.onLyricWindowClosed(() => {
         isLyricWindowOpen.value = false;
       });
-      // 歌词窗口 Vue 加载完成后，发送完整歌词数据
-      window.api.onLyricWindowReady(() => {
-        if (isLyricWindowOpen.value) {
-          sendLyricToWin();
+      window.api.onLyricWindowReady(async () => {
+        if (!isLyricWindowOpen.value) return;
+        // 窗口加载完成时再兜底加载一次, 防止 openLyric 阶段 lyric 字段尚未到位
+        if (lrcArray.value.length === 0 && playMusic.value?.id) {
+          await ensureLyricsLoaded(true);
         }
+        sendLyricToWin();
       });
     }
 
